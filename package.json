@@ -1,0 +1,35 @@
+{
+  "name": "hardhat-sample",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "init_code_hash": "npx ts-node ./util/getInitCodeHash.ts",
+    "test": "hardhat test",
+    "coverage": "npx hardhat coverage",
+    "deploy_factory": "npx hardhat run deploy/deploy_factory.ts --network",
+    "verify_factory": "npx hardhat verify --contract \"contracts/LovelyFactory.sol:LovelyFactory\"",
+    "deploy_router": "npx hardhat run deploy/deploy_router.ts --network",
+    "verify_router": "npx hardhat verify --contract \"contracts/LovelyRouter02.sol:LovelyRouter02\"",
+    "deploy_TC_router": "npx hardhat run deploy/deploy_TC_router.ts --network",
+    "verify_TC_router": "npx hardhat verify --contract \"contracts/LovelyTCRouter.sol:LovelyTCRouter\"",
+    "lint": "eslint ./ --fix"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0",
+    "@openzeppelin/hardhat-upgrades": "^3.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "dotenv": "^8.2.0",
+    "eslint": "^7.24.0",
+    "eslint-config-prettier": "^8.2.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "hardhat": "^2.20.1",
+    "prettier": "^2.2.1",
+    "pretty-quick": "^3.1.0",
+    "solhint": "^3.3.4"
+  }
+}
