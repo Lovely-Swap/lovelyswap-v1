@@ -48,7 +48,6 @@ contract LovelyTCRouter is ILovelyTCRouter, LovelyRouter02 {
 	/// @param end timestamp when the competition ends
 	/// @param rewardToken a token that will be used to pay rewards
 	/// @param rewards an array with rewards for each of 4 rewards tiers of users. <b>These amounts will go to each user of a tier!</b>
-
 	function createCompetition(
 		uint256 start,
 		uint256 end,
