@@ -11,20 +11,9 @@ contract LovelyTCRouter is ILovelyTCRouter, LovelyRouter02 {
 	uint256[] private TOTAL_WINNERS = [5, 10, 20, 50];
 	uint256[4] private WINNERS = [5, 5, 10, 30];
 
-	/*
-I worked on the new contracts integration and realized that we lack some view functions for integration.
-LovelyFactory:
-- we need to get activeFrom for allowedTokens
-LovelyTCRouter:
-- now I have no way to get the total number of rewards for the competitions
-- it would also be good to be able to get the number of rewards that a participant can claim
-- getParticipants does not return registered participants
-- it would be nice to have a view function to check if the address is registered as participant in any competition and returns an array of competitions IDs
-*/
-
 	Competition[] public competitions;
-	mapping(address pair => uint256[] competiotions) public pairToCompetitions;
-	mapping(address account => uint256[] competiotions) public userCompetiotions;
+	mapping(address pair => uint256[] competitions) public pairToCompetitions;
+	mapping(address account => uint256[] competitions) public userCompetitions;
 
 	constructor(address _factory, address _WETH) LovelyRouter02(_factory, _WETH) {}
 
@@ -41,7 +30,7 @@ LovelyTCRouter:
 	}
 
 	function competitionsOf(address account) external view returns (uint256[] memory) {
-		return userCompetiotions[account];
+		return userCompetitions[account];
 	}
 
 	function isRegistered(uint256 competition, address account) external view returns (bool) {
@@ -51,12 +40,12 @@ LovelyTCRouter:
 	function register(uint256 competition) external {
 		require(!competitions[competition].registeredUsers[msg.sender], "LovelyTCRouter: already registered");
 		competitions[competition].registeredUsers[msg.sender] = true;
-		userCompetiotions[msg.sender].push(competition);
+		userCompetitions[msg.sender].push(competition);
 	}
 
-	/// @notice Creates a competiotion
-	/// @param start timestamp when the competiotion starts
-	/// @param end timestamp when the competiotion ends
+	/// @notice Creates a competition
+	/// @param start timestamp when the competition starts
+	/// @param end timestamp when the competition ends
 	/// @param rewardToken a token that will be used to pay rewards
 	/// @param rewards an array with rewards for each of 4 rewards tiers of users. <b>These amounts will go to each user of a tier!</b>
 
