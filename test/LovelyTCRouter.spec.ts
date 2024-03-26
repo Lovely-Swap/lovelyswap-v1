@@ -16,8 +16,9 @@ const overrides = {
 }
 
 
-describe('LovelyRouter{01,02}', () => {
+describe('LovelyTCRouter', () => {
     const DAYS_30 = 30 * 24 * 60 * 60;
+    const TC_CREATE_FEE = BigInt(100000)
     let wallet: SignerWithAddress;
     let accounts: SignerWithAddress[];
 
@@ -40,7 +41,7 @@ describe('LovelyRouter{01,02}', () => {
         WETH = fixture.WETH
         WETHPartner = fixture.WETHPartner
         factory = fixture.factory
-        router = await new LovelyTCRouter__factory(wallet).deploy(factory, WETH);
+        router = await new LovelyTCRouter__factory(wallet).deploy(factory, WETH, TC_CREATE_FEE);
         pair = fixture.pair
         WETHPair = fixture.WETHPair
         routerEventEmitter = fixture.routerEventEmitter
@@ -162,6 +163,17 @@ describe('LovelyRouter{01,02}', () => {
                 await token1.connect(account).approve(await router.getAddress(), token1Amount)
 
             }
+            it('competiotion fee', async () => {
+                await token0.connect(accounts[1]).approve(await router.getAddress(), MaxUint256)
+                await token0.connect(accounts[1]).mint(expandTo18Decimals(200))
+
+                const pairs = [await pair.getAddress()]
+                const rewards = [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2), expandTo18Decimals(1)]
+                await expect(router.connect(accounts[1]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, rewards, pairs))
+                    .to.be.revertedWith("LovelyTCRouter: INVALID_FEE")
+                await expect(router.connect(accounts[1]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, rewards, pairs, { value: TC_CREATE_FEE }))
+                    .to.emit(router, "CompetitionCreated").withArgs(1)
+            })
 
             it('competiotion tests', async () => {
                 const competiotionId = 0;

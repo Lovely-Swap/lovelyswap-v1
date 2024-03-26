@@ -1,11 +1,12 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "./LovelyRouter02.sol";
 import "./interfaces/ILovelyTCRouter.sol";
 import "./libraries/LovelyLibrary.sol";
 
-contract LovelyTCRouter is ILovelyTCRouter, LovelyRouter02 {
+contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 	uint256 public constant MAX_PARTICIPANTS = 1000;
 	uint256 private constant DAYS_30 = 30 * 24 * 60 * 60;
 	uint256[] private TOTAL_WINNERS = [5, 10, 20, 50];
@@ -15,7 +16,15 @@ contract LovelyTCRouter is ILovelyTCRouter, LovelyRouter02 {
 	mapping(address pair => uint256[] competitions) public pairToCompetitions;
 	mapping(address account => uint256[] competitions) public userCompetitions;
 
-	constructor(address _factory, address _WETH) LovelyRouter02(_factory, _WETH) {}
+	uint256 public competitionFee;
+
+	constructor(
+		address _factory,
+		address _WETH,
+		uint256 _competitionFee
+	) LovelyRouter02(_factory, _WETH) Ownable(msg.sender) {
+		competitionFee = _competitionFee;
+	}
 
 	function competitionsLength() external view returns (uint256) {
 		return competitions.length;
@@ -37,10 +46,8 @@ contract LovelyTCRouter is ILovelyTCRouter, LovelyRouter02 {
 		return competitions[competition].registeredUsers[account];
 	}
 
-	function register(uint256 competition) external {
-		require(!competitions[competition].registeredUsers[msg.sender], "LovelyTCRouter: already registered");
-		competitions[competition].registeredUsers[msg.sender] = true;
-		userCompetitions[msg.sender].push(competition);
+	function setCompetitionFee(uint256 _competitionFee) external onlyOwner {
+		competitionFee = _competitionFee;
 	}
 
 	/// @notice Creates a competition
@@ -54,7 +61,11 @@ contract LovelyTCRouter is ILovelyTCRouter, LovelyRouter02 {
 		address rewardToken,
 		uint256[] memory rewards,
 		address[] memory pairs
-	) external {
+	) external payable {
+		if (msg.sender != owner()) {
+			require(msg.value == competitionFee, "LovelyTCRouter: INVALID_FEE");
+			TransferHelper.safeTransferETH(owner(), msg.value);
+		}
 		require(start > block.timestamp && end > block.timestamp, "LovelyTCRouter: INVALID_RANGE");
 		require(end - start <= DAYS_30, "LovelyTCRouter: RANGE_TOO_BIG");
 		require(rewards.length == 4, "LovelyTCRouter: WRONG_REWARDS_LENGTH");
@@ -73,6 +84,13 @@ contract LovelyTCRouter is ILovelyTCRouter, LovelyRouter02 {
 			pairToCompetitions[pairs[i]].push(competitions.length - 1);
 		}
 		emit CompetitionCreated(competitions.length - 1);
+	}
+
+	
+	function register(uint256 competition) external {
+		require(!competitions[competition].registeredUsers[msg.sender], "LovelyTCRouter: already registered");
+		competitions[competition].registeredUsers[msg.sender] = true;
+		userCompetitions[msg.sender].push(competition);
 	}
 
 	function sumUpCompetition(uint256 competition) external {
