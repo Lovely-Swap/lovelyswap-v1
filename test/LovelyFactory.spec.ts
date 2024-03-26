@@ -88,11 +88,14 @@ describe('LovelyFactory', () => {
 
         await expect(factory.allowToken(tokens[1], timestamp + days7)).to.emit(factory, 'TokenAllowed')
         await expect(factory.allowToken(tokens[2], timestamp + days7)).to.emit(factory, 'TokenAllowed')
+        expect((await factory.allowlists(tokens[1]))[1]).to.be.equal(timestamp + days7);
+
 
         await expect(factory.connect(other).createPair(tokens[1], tokens[2], 0)).to.be.revertedWith("Lovely Swap: FORBIDDEN")
         await expect(factory.createPair(tokens[1], tokens[2], timestamp + days7 + 10)).to.be.revertedWith("LOVELY: INVALID_ACTIVE_FROM")
 
         await expect(factory.createPair(tokens[1], tokens[2], timestamp + days7)).to.emit(factory, 'PairCreated')
+
     })
 
 
@@ -108,4 +111,6 @@ describe('LovelyFactory', () => {
         expect(await factory.feeToSetter()).to.eq(other.address)
         await expect(factory.setFeeToSetter(wallet.address)).to.be.revertedWith('Lovely Swap: FORBIDDEN')
     })
+
+
 })
