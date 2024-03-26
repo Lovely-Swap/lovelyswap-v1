@@ -15,7 +15,7 @@ contract LovelyFactory is ILovelyFactory {
 	uint256 public ownerFee; //1 is 0.01%
 	uint256 public lpFee; //1 is 0.01%
 
-	mapping(address token => AllowedToken allowedToken) allowlists;
+	mapping(address token => AllowedToken allowedToken) public allowlists;
 	mapping(address => mapping(address => address)) public getPair;
 	address[] public allPairs;
 	address[] public allowedTokens;

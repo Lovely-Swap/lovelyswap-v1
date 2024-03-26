@@ -16,7 +16,6 @@ interface ILovelyTCRouter is ILovelyRouter02 {
 		uint256 participantsCount;
 		uint256 start;
 		uint256 end;
-		uint256 rewardsAmount;
 		uint256 totalTradeVolume;
 		address rewardToken;
 		address owner;

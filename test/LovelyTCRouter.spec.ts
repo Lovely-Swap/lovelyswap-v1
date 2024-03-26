@@ -187,6 +187,7 @@ describe('LovelyRouter{01,02}', () => {
 
                 }
                 expect((await router.competitions(competiotionId)).participantsCount).to.be.equal(5)
+                expect(await router.isRegistered(competiotionId, accounts[5])).to.be.true
                 const participants = await router.getParticipants(competiotionId)
                 expect(participants.length).to.be.equal(5)
                 const offchainSortedArray = [...participants].sort((a, b) => {

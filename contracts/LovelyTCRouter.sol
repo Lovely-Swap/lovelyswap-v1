@@ -11,8 +11,20 @@ contract LovelyTCRouter is ILovelyTCRouter, LovelyRouter02 {
 	uint256[] private TOTAL_WINNERS = [5, 10, 20, 50];
 	uint256[4] private WINNERS = [5, 5, 10, 30];
 
+	/*
+I worked on the new contracts integration and realized that we lack some view functions for integration.
+LovelyFactory:
+- we need to get activeFrom for allowedTokens
+LovelyTCRouter:
+- now I have no way to get the total number of rewards for the competitions
+- it would also be good to be able to get the number of rewards that a participant can claim
+- getParticipants does not return registered participants
+- it would be nice to have a view function to check if the address is registered as participant in any competition and returns an array of competitions IDs
+*/
+
 	Competition[] public competitions;
 	mapping(address pair => uint256[] competiotions) public pairToCompetitions;
+	mapping(address account => uint256[] competiotions) public userCompetiotions;
 
 	constructor(address _factory, address _WETH) LovelyRouter02(_factory, _WETH) {}
 
@@ -24,8 +36,22 @@ contract LovelyTCRouter is ILovelyTCRouter, LovelyRouter02 {
 		return competitions[competition].participants;
 	}
 
+	function getRewards(uint256 competition) external view returns (uint256[] memory) {
+		return competitions[competition].rewards;
+	}
+
+	function competitionsOf(address account) external view returns (uint256[] memory) {
+		return userCompetiotions[account];
+	}
+
+	function isRegistered(uint256 competition, address account) external view returns (bool) {
+		return competitions[competition].registeredUsers[account];
+	}
+
 	function register(uint256 competition) external {
+		require(!competitions[competition].registeredUsers[msg.sender], "LovelyTCRouter: already registered");
 		competitions[competition].registeredUsers[msg.sender] = true;
+		userCompetiotions[msg.sender].push(competition);
 	}
 
 	/// @notice Creates a competiotion
