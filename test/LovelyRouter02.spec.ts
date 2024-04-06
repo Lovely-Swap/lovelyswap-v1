@@ -245,6 +245,79 @@ describe('fee-on-transfer tokens', () => {
         )
     })
 
+    it('removeLiquidityETHWithPermitSupportingFeeOnTransferTokens: 2', async () => {
+        const DTTAmount = getBigInt(expandTo18Decimals(1)) * getBigInt(100) / getBigInt(99)
+        const ETHAmount = getBigInt(expandTo18Decimals(4))
+        await addLiquidity(DTTAmount, ETHAmount)
+
+        const expectedLiquidity = getBigInt(expandTo18Decimals(2))
+
+        const nonce = await pair.nonces(wallet.address)
+
+        const sig = await wallet.signTypedData(
+            {
+                name: await pair.name(),
+                version: '1',
+                chainId: 31337,
+                verifyingContract: await pair.getAddress()
+            },
+            {
+                Permit: [
+                    {
+                        name: "owner",
+                        type: "address",
+                    },
+                    {
+                        name: "spender",
+                        type: "address",
+                    },
+                    {
+                        name: "value",
+                        type: "uint256",
+                    },
+                    {
+                        name: "nonce",
+                        type: "uint256",
+                    },
+                    {
+                        name: "deadline",
+                        type: "uint256",
+                    },
+                ],
+            },
+            {
+                owner: wallet.address,
+                spender: await router.getAddress(),
+                value: MaxUint256,
+                nonce: nonce,
+                deadline: MaxUint256,
+            }
+        )
+        const signature = ethers.Signature.from(sig)
+
+        const DTTInPair = await DTT.balanceOf(await pair.getAddress())
+        const WETHInPair = await WETH.balanceOf(await pair.getAddress())
+        const liquidity = await pair.balanceOf(wallet.address)
+        const totalSupply = await pair.totalSupply()
+        const NaiveDTTExpected = DTTInPair * liquidity / totalSupply
+        const WETHExpected = WETHInPair * liquidity / totalSupply
+
+        await pair.approve(await router.getAddress(), MaxUint256)
+        await router.removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
+            await DTT.getAddress(),
+            liquidity,
+            NaiveDTTExpected,
+            WETHExpected,
+            wallet.address,
+            MaxUint256,
+            true,
+            signature.v,
+            signature.r,
+            signature.s,
+            overrides
+        )
+    })
+
     describe('swapExactTokensForTokensSupportingFeeOnTransferTokens', () => {
         const DTTAmount = getBigInt(expandTo18Decimals(5)) * getBigInt(100) / getBigInt(99)
         const ETHAmount = getBigInt(expandTo18Decimals(10))
@@ -289,6 +362,27 @@ describe('fee-on-transfer tokens', () => {
         const ETHAmount = getBigInt(expandTo18Decimals(5))
         const swapAmount = getBigInt(expandTo18Decimals(1))
         await addLiquidity(DTTAmount, ETHAmount)
+
+        await expect(router.swapExactETHForTokensSupportingFeeOnTransferTokens(
+            0,
+            [await DTT.getAddress(), await DTT.getAddress()],
+            wallet.address,
+            MaxUint256,
+            {
+                value: swapAmount
+            }
+        )).to.be.revertedWith("LovelyV2Router: INVALID_PATH");
+
+        await expect(router.swapExactETHForTokensSupportingFeeOnTransferTokens(
+            0,
+            [await WETH.getAddress(), await DTT.getAddress()],
+            wallet.address,
+            0,
+            {
+                value: swapAmount
+            }
+        )).to.be.revertedWith("LovelyV2Router: EXPIRED");
+
         await router.connect(wallet).swapExactETHForTokensSupportingFeeOnTransferTokens(
             0,
             [await WETH.getAddress(), await DTT.getAddress()],
@@ -309,6 +403,24 @@ describe('fee-on-transfer tokens', () => {
         await addLiquidity(DTTAmount, ETHAmount)
         await DTT.approve(await router.getAddress(), MaxUint256)
 
+        await expect(router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+            swapAmount,
+            0,
+            [await DTT.getAddress(), await DTT.getAddress()],
+            wallet.address,
+            MaxUint256,
+            overrides
+        )).to.be.revertedWith("LovelyV2Router: INVALID_PATH");
+
+        await expect(router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+            swapAmount,
+            0,
+            [await DTT.getAddress(), await DTT.getAddress()],
+            wallet.address,
+            0,
+            overrides
+        )).to.be.revertedWith("LovelyV2Router: EXPIRED");
+
         await router.swapExactTokensForETHSupportingFeeOnTransferTokens(
             swapAmount,
             0,
@@ -325,6 +437,8 @@ describe('fee-on-transfer tokens: reloaded', () => {
 
     let DTT: DeflatingERC20
     let DTT2: DeflatingERC20
+    let DTT3: DeflatingERC20
+
     let router: LovelyRouter02
     beforeEach(async function () {
         const accounts = await ethers.getSigners();
@@ -334,20 +448,27 @@ describe('fee-on-transfer tokens: reloaded', () => {
         router = fixture.router02
 
         DTT = await new DeflatingERC20__factory(wallet).deploy(expandTo18Decimals(10000));
-        DTT2 = await new DeflatingERC20__factory(wallet).deploy(expandTo18Decimals(10000));
+        DTT2 = await new DeflatingERC20__factory(wallet).deploy(expandTo18Decimals(100000));
+        DTT3 = await new DeflatingERC20__factory(wallet).deploy(expandTo18Decimals(100000));
+
         await fixture.factory.allowToken(DTT, 0);
         await fixture.factory.allowToken(DTT2, 0);
+        await fixture.factory.allowToken(DTT3, 0);
         // make a DTT<>DTT pair
         await fixture.factory.createPair(await DTT.getAddress(), await DTT2.getAddress(), 0)
+        await fixture.factory.createPair(await DTT2.getAddress(), await DTT3.getAddress(), 0)
+
     })
 
     afterEach(async function () {
         expect(await ethers.provider.getBalance(await router.getAddress())).to.eq(0)
     })
 
-    async function addLiquidity(DTTAmount: bigint, DTT2Amount: bigint) {
+    async function addLiquidity(DTTAmount: bigint, DTT2Amount: bigint, DTT3Amount: bigint) {
         await DTT.approve(await router.getAddress(), MaxUint256)
         await DTT2.approve(await router.getAddress(), MaxUint256)
+        await DTT3.approve(await router.getAddress(), MaxUint256)
+
         await router.addLiquidity(
             await DTT.getAddress(),
             await DTT2.getAddress(),
@@ -359,15 +480,28 @@ describe('fee-on-transfer tokens: reloaded', () => {
             MaxUint256,
             overrides
         )
+
+        await router.addLiquidity(
+            await DTT2.getAddress(),
+            await DTT3.getAddress(),
+            DTT2Amount,
+            DTT3Amount,
+            DTT2Amount,
+            DTT3Amount,
+            wallet.address,
+            MaxUint256,
+            overrides
+        )
     }
 
     describe('swapExactTokensForTokensSupportingFeeOnTransferTokens', () => {
         const DTTAmount = getBigInt(expandTo18Decimals(5)) * getBigInt(100) / getBigInt(99)
         const DTT2Amount = getBigInt(expandTo18Decimals(5))
+        const DTT3Amount = getBigInt(expandTo18Decimals(5))
         const amountIn = getBigInt(expandTo18Decimals(1))
 
         beforeEach(async () => {
-            await addLiquidity(DTTAmount, DTT2Amount)
+            await addLiquidity(DTTAmount, DTT2Amount, DTT3Amount)
         })
 
         it('DTT -> DTT2', async () => {
@@ -377,6 +511,19 @@ describe('fee-on-transfer tokens: reloaded', () => {
                 amountIn,
                 0,
                 [await DTT.getAddress(), await DTT2.getAddress()],
+                wallet.address,
+                MaxUint256,
+                overrides
+            )
+        })
+
+        it('DTT -> DTT3', async () => {
+            await DTT.approve(await router.getAddress(), MaxUint256)
+
+            await router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                amountIn,
+                0,
+                [await DTT.getAddress(), await DTT2.getAddress(), await DTT3.getAddress()],
                 wallet.address,
                 MaxUint256,
                 overrides

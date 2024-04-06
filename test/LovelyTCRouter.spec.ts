@@ -163,7 +163,11 @@ describe('LovelyTCRouter', () => {
                 await token1.connect(account).approve(await router.getAddress(), token1Amount)
 
             }
-            it('competiotion fee', async () => {
+            it('register', async () => {
+                await expect(router.connect(accounts[1]).register(2)).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION")
+            })
+
+            it('competition fee', async () => {
                 await token0.connect(accounts[1]).approve(await router.getAddress(), MaxUint256)
                 await token0.connect(accounts[1]).mint(expandTo18Decimals(200))
 
@@ -173,21 +177,227 @@ describe('LovelyTCRouter', () => {
                     .to.be.revertedWith("LovelyTCRouter: INVALID_FEE")
                 await expect(router.connect(accounts[1]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, rewards, pairs, { value: TC_CREATE_FEE }))
                     .to.emit(router, "CompetitionCreated").withArgs(1)
+                const rewardsResult = await router.getRewards(0);
+                expect(rewardsResult[0]).to.be.equal(rewards[0])
+                expect(rewardsResult[1]).to.be.equal(rewards[1])
+                expect(rewardsResult[2]).to.be.equal(rewards[2])
+                expect(rewardsResult[3]).to.be.equal(rewards[3])
+
+                await expect(router.connect(accounts[2]).setCompetitionFee(BigInt(1))).to.be.reverted;
+                await router.setCompetitionFee(BigInt(1));
+                expect(await router.competitionFee()).to.be.equal(BigInt(1));
+
             })
 
-            it('competiotion tests', async () => {
-                const competiotionId = 0;
+            it('trade before competition', async () => {
+                await token0.mint(expandTo18Decimals(10000000000))
+                await token1.mint(expandTo18Decimals(10000000000))
+                await addLiquidity(BigInt(expandTo18Decimals(10000000000)), BigInt(expandTo18Decimals(10000000000)));
+
+                const account = accounts[3];
+                const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                const token1Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                await mintAndApprove(account, token0Amount * BigInt(2), token1Amount * BigInt(2))
+                await router.connect(account).swapExactTokensForTokens(
+                    token0Amount > token1Amount ? token0Amount : token1Amount,
+                    0,
+                    token0Amount > token1Amount ? [await token0.getAddress(), await token1.getAddress()] : [await token1.getAddress(), await token0.getAddress()],
+                    await account.getAddress(),
+                    MaxUint256,
+                    overrides
+                )
+
+            })
+
+
+            it('trade after competition', async () => {
+                await token0.mint(expandTo18Decimals(10000000000))
+                await token1.mint(expandTo18Decimals(10000000000))
+                await addLiquidity(BigInt(expandTo18Decimals(10000000000)), BigInt(expandTo18Decimals(10000000000)));
+                mineBlockIncreaseTime(DAYS_30);
+                mineBlockIncreaseTime(DAYS_30);
+
+                const account = accounts[3];
+                const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                const token1Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                await mintAndApprove(account, token0Amount * BigInt(2), token1Amount * BigInt(2))
+                await router.connect(account).swapExactTokensForTokens(
+                    token0Amount > token1Amount ? token0Amount : token1Amount,
+                    0,
+                    token0Amount > token1Amount ? [await token0.getAddress(), await token1.getAddress()] : [await token1.getAddress(), await token0.getAddress()],
+                    await account.getAddress(),
+                    MaxUint256,
+                    overrides
+                )
+
+            })
+
+            it('multiple trades in a competition', async () => {
+                const competitionId = 0;
                 mineBlockIncreaseTime(500);
-                token0.mint(expandTo18Decimals(10000000000))
-                token1.mint(expandTo18Decimals(10000000000))
-                addLiquidity(BigInt(expandTo18Decimals(10000000000)), BigInt(expandTo18Decimals(10000000000)));
-                expect((await router.competitions(competiotionId)).participantsCount).to.be.equal(0);
-                for (let i = 5; i < 10; i++) {
+                await token0.mint(expandTo18Decimals(10000000000))
+                await token1.mint(expandTo18Decimals(10000000000))
+                await addLiquidity(BigInt(expandTo18Decimals(10000000000)), BigInt(expandTo18Decimals(10000000000)));
+
+                const account = accounts[3];
+                const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                const token1Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                await mintAndApprove(account, token0Amount * BigInt(2), token1Amount * BigInt(2))
+                await router.connect(account).register(competitionId)
+                await router.connect(account).swapExactTokensForTokens(
+                    token0Amount > token1Amount ? token0Amount : token1Amount,
+                    0,
+                    token0Amount > token1Amount ? [await token0.getAddress(), await token1.getAddress()] : [await token1.getAddress(), await token0.getAddress()],
+                    await account.getAddress(),
+                    MaxUint256,
+                    overrides
+                )
+
+                await router.connect(account).swapExactTokensForTokens(
+                    token0Amount > token1Amount ? token0Amount : token1Amount,
+                    0,
+                    token0Amount > token1Amount ? [await token0.getAddress(), await token1.getAddress()] : [await token1.getAddress(), await token0.getAddress()],
+                    await account.getAddress(),
+                    MaxUint256,
+                    overrides
+                )
+
+            })
+
+            it('withdraw remainings 1', async () => {
+                const competitionId = 0;
+                mineBlockIncreaseTime(500);
+
+                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWith("LovelyTCRouter: NOT_FINISHED")
+                await expect(router.withdrawRemainings(2)).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION")
+
+                const account = accounts[3];
+                const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                const token1Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                await mintAndApprove(account, token0Amount * BigInt(2), token1Amount * BigInt(2))
+                await router.connect(account).register(competitionId)
+                await router.connect(account).swapExactTokensForTokens(
+                    token0Amount > token1Amount ? token0Amount : token1Amount,
+                    0,
+                    token0Amount > token1Amount ? [await token0.getAddress(), await token1.getAddress()] : [await token1.getAddress(), await token0.getAddress()],
+                    await account.getAddress(),
+                    MaxUint256,
+                    overrides
+                )
+                mineBlockIncreaseTime(DAYS_30)
+                await expect(router.sumUpCompetition(0)).to.emit(router, "ReadyForPayouts").withArgs(competitionId)
+                await expect(router.claimByAddress(competitionId, account.address)).to.emit(token0, "Transfer").withArgs(await router.getAddress(), account.address, expandTo18Decimals(10));
+                await expect(router.withdrawRemainings(competitionId)).to.not.be.reverted
+                expect(await token0.balanceOf(router)).to.be.equal(expandTo18Decimals(0))
+
+            })
+
+            it('withdraw remainings 2', async () => {
+                const competitionId = 0;
+                mineBlockIncreaseTime(500);
+
+                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWith("LovelyTCRouter: NOT_FINISHED")
+                await expect(router.withdrawRemainings(2)).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION")
+
+
+                for (let i = 5; i < 11; i++) {
                     const account = accounts[i];
                     const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
                     const token1Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
                     await mintAndApprove(account, token0Amount, token1Amount)
-                    router.connect(account).register(competiotionId)
+                    await router.connect(account).register(competitionId)
+                    await router.connect(account).swapExactTokensForTokens(
+                        token0Amount > token1Amount ? token0Amount : token1Amount,
+                        0,
+                        token0Amount > token1Amount ? [await token0.getAddress(), await token1.getAddress()] : [await token1.getAddress(), await token0.getAddress()],
+                        await account.getAddress(),
+                        MaxUint256,
+                        overrides
+                    )
+                }
+
+                mineBlockIncreaseTime(DAYS_30)
+                await expect(router.sumUpCompetition(0)).to.emit(router, "ReadyForPayouts").withArgs(competitionId)
+
+                await expect(router.withdrawRemainings(competitionId)).to.not.be.reverted
+            })
+
+            it('withdraw remainings 3', async () => {
+                const competitionId = 0;
+                mineBlockIncreaseTime(500);
+
+                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWith("LovelyTCRouter: NOT_FINISHED")
+                await expect(router.withdrawRemainings(2)).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION")
+
+
+                for (let i = 5; i < 16; i++) {
+                    const account = accounts[i];
+                    const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                    const token1Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                    await mintAndApprove(account, token0Amount, token1Amount)
+                    await router.connect(account).register(competitionId)
+                    await router.connect(account).swapExactTokensForTokens(
+                        token0Amount > token1Amount ? token0Amount : token1Amount,
+                        0,
+                        token0Amount > token1Amount ? [await token0.getAddress(), await token1.getAddress()] : [await token1.getAddress(), await token0.getAddress()],
+                        await account.getAddress(),
+                        MaxUint256,
+                        overrides
+                    )
+                }
+
+                mineBlockIncreaseTime(DAYS_30)
+                await expect(router.sumUpCompetition(0)).to.emit(router, "ReadyForPayouts").withArgs(competitionId)
+
+                await expect(router.withdrawRemainings(competitionId)).to.not.be.reverted
+            })
+
+            it('withdraw remainings 4', async () => {
+                const competitionId = 0;
+                mineBlockIncreaseTime(500);
+
+                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWith("LovelyTCRouter: NOT_FINISHED")
+                await expect(router.withdrawRemainings(2)).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION")
+
+
+                for (let i = 5; i < 26; i++) {
+                    const account = accounts[i];
+                    const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                    const token1Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                    await mintAndApprove(account, token0Amount, token1Amount)
+                    await router.connect(account).register(competitionId)
+                    await router.connect(account).swapExactTokensForTokens(
+                        token0Amount > token1Amount ? token0Amount : token1Amount,
+                        0,
+                        token0Amount > token1Amount ? [await token0.getAddress(), await token1.getAddress()] : [await token1.getAddress(), await token0.getAddress()],
+                        await account.getAddress(),
+                        MaxUint256,
+                        overrides
+                    )
+                }
+
+                mineBlockIncreaseTime(DAYS_30)
+                await expect(router.sumUpCompetition(0)).to.emit(router, "ReadyForPayouts").withArgs(competitionId)
+
+                await expect(router.withdrawRemainings(competitionId)).to.not.be.reverted
+            })
+
+            it('competition tests', async () => {
+                const competitionId = 0;
+                mineBlockIncreaseTime(500);
+                await token0.mint(expandTo18Decimals(10000000000))
+                await token1.mint(expandTo18Decimals(10000000000))
+                await addLiquidity(BigInt(expandTo18Decimals(10000000000)), BigInt(expandTo18Decimals(10000000000)));
+                expect((await router.competitions(competitionId)).participantsCount).to.be.equal(0);
+
+
+                for (let i = 5; i < 11; i++) {
+                    const account = accounts[i];
+                    const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                    const token1Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
+                    await mintAndApprove(account, token0Amount, token1Amount)
+                    if (i < 10)
+                        await router.connect(account).register(competitionId)
                     await router.connect(account).swapExactTokensForTokens(
                         token0Amount > token1Amount ? token0Amount : token1Amount,
                         0,
@@ -198,9 +408,9 @@ describe('LovelyTCRouter', () => {
                     )
 
                 }
-                expect((await router.competitions(competiotionId)).participantsCount).to.be.equal(5)
-                expect(await router.isRegistered(competiotionId, accounts[5])).to.be.true
-                const participants = await router.getParticipants(competiotionId)
+                expect((await router.competitions(competitionId)).participantsCount).to.be.equal(5)
+                expect(await router.isRegistered(competitionId, accounts[5])).to.be.true
+                const participants = await router.getParticipants(competitionId)
                 expect(participants.length).to.be.equal(5)
                 const offchainSortedArray = [...participants].sort((a, b) => {
                     if (a[1] > b[1]) return 1;
@@ -212,7 +422,7 @@ describe('LovelyTCRouter', () => {
 
                 mineBlockIncreaseTime(DAYS_30)
                 await expect(router.sumUpCompetition(0)).to.emit(router, "ReadyForPayouts").withArgs(0)
-                const onchainSortedArray = await router.getParticipants(competiotionId)
+                const onchainSortedArray = await router.getParticipants(competitionId)
                 for (let i = 0; i < onchainSortedArray.length; i++) {
                     await expect(onchainSortedArray[i][1]).to.be.equal(offchainSortedArray[i][1])
                 }
@@ -222,25 +432,29 @@ describe('LovelyTCRouter', () => {
                     await expect(router.claimByAddress(0, account.address)).to.emit(token0, "Transfer").withArgs(await router.getAddress(), account.address, expandTo18Decimals(10));
                 }
 
-                await router.withdrawRemainings(0)
+                await router.withdrawRemainings(competitionId)
                 expect(await token0.balanceOf(router)).to.be.equal(expandTo18Decimals(0))
+                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWith("LovelyTCRouter: ALREADY_WITHDRAWN")
+
+                await expect(router.claimByAddress(0, accounts[0])).to.be.revertedWith("LovelyTCRouter: NOT_WINNER");
+                await expect(router.claimByAddress(2, accounts[0])).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION");
 
             })
 
-            it('competiotion tests: soldout', async () => {
-                const competiotionId = 0;
+            it('competition tests: soldout', async () => {
+                const competitionId = 0;
                 await expect(router.claimById(0, 0)).to.be.revertedWith("LovelyTCRouter: WINNERS_NOT_SELECTED")
                 mineBlockIncreaseTime(500);
                 token0.mint(expandTo18Decimals(10000000000))
                 token1.mint(expandTo18Decimals(10000000000))
                 addLiquidity(BigInt(expandTo18Decimals(10000000000)), BigInt(expandTo18Decimals(10000000000)));
-                expect((await router.competitions(competiotionId)).participantsCount).to.be.equal(0);
+                expect((await router.competitions(competitionId)).participantsCount).to.be.equal(0);
                 for (let i = 5; i < 60; i++) {
                     const account = accounts[i];
                     const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
                     const token1Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
                     await mintAndApprove(account, token0Amount, token1Amount)
-                    router.connect(account).register(competiotionId)
+                    router.connect(account).register(competitionId)
                     await router.connect(account).swapExactTokensForTokens(
                         token0Amount > token1Amount ? token0Amount : token1Amount,
                         0,
@@ -251,10 +465,17 @@ describe('LovelyTCRouter', () => {
                     )
 
                 }
-                expect((await router.competitions(competiotionId)).participantsCount).to.be.equal(55)
 
+                await expect(router.connect(accounts[5]).register(competitionId)).to.be.rejectedWith("LovelyTCRouter: already registered")
+                expect((await router.competitions(competitionId)).participantsCount).to.be.equal(55)
+                expect((await router.competitionsOf(accounts[5])).length).to.be.equal(1);
+
+                await expect(router.sumUpCompetition(5)).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION");
+                await expect(router.sumUpCompetition(competitionId)).to.be.revertedWith("LovelyTCRouter: COMPETITION_ACTIVE");
                 mineBlockIncreaseTime(DAYS_30)
-                await expect(router.sumUpCompetition(0)).to.emit(router, "ReadyForPayouts").withArgs(0)
+                await expect(router.sumUpCompetition(competitionId)).to.emit(router, "ReadyForPayouts").withArgs(0)
+                await expect(router.sumUpCompetition(competitionId)).to.be.revertedWith("LovelyTCRouter: ALREADY_SORTED");
+
 
                 const participants = await router.getParticipants(0);
                 for (let i = 0; i < 50; i++) {
@@ -268,11 +489,14 @@ describe('LovelyTCRouter', () => {
                 }
                 await expect(router.claimById(0, 49)).to.be.revertedWith("LovelyTCRouter: ALREADY_CLAIMED")
                 await expect(router.claimById(0, 50)).to.be.revertedWith("LovelyTCRouter: NOT_WINNER")
+
+                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWith("LovelyTCRouter: NOTHING TO WITHDRAW");
+
             })
 
 
             // it('loadtest', async () => {
-            //     const competiotionId = 0;
+            //     const competitionId = 0;
             //     await expect(router.claimById(0, 0)).to.be.revertedWith("LovelyTCRouter: WINNERS_NOT_SELECTED")
             //     mineBlockIncreaseTime(500);
             //     token0.mint(expandTo18Decimals(10000000000))
@@ -283,7 +507,7 @@ describe('LovelyTCRouter', () => {
             //         const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
             //         const token1Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
             //         await mintAndApprove(account, token0Amount, token1Amount)
-            //         router.connect(account).register(competiotionId)
+            //         router.connect(account).register(competitionId)
             //         await router.connect(account).swapExactTokensForTokens(
             //             token0Amount > token1Amount ? token0Amount : token1Amount,
             //             0,
@@ -293,7 +517,7 @@ describe('LovelyTCRouter', () => {
             //             overrides
             //         )
             //     }
-            //     expect((await router.competitions(competiotionId)).participantsCount).to.be.equal(1000)
+            //     expect((await router.competitions(competitionId)).participantsCount).to.be.equal(1000)
             //     mineBlockIncreaseTime(DAYS_30)
             //     await expect(router.sumUpCompetition(0)).to.emit(router, "ReadyForPayouts").withArgs(0)
 

@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import { getBigInt, MaxUint256 } from 'ethers'
-import { ERC20, LovelyRouter02, WETH9, LovelyPair, LovelyFactory, RouterEventEmitter } from '../typechain-types';
+import { ERC20, LovelyRouter02, WETH9, LovelyPair, LovelyFactory, RouterEventEmitter, LovelyPair__factory } from '../typechain-types';
 
 import { ecsign } from 'ethereumjs-util';
 
@@ -16,7 +16,6 @@ const overrides = {
 }
 
 enum RouterVersion {
-    LovelyRouter01 = 'LovelyRouter01',
     LovelyRouter02 = 'LovelyRouter02'
 }
 
@@ -27,12 +26,15 @@ describe('LovelyRouter{01,02}', () => {
 
         let token0: ERC20
         let token1: ERC20
+        let token2: ERC20
+
         let router: LovelyRouter02
 
         let WETH: WETH9
         let WETHPartner: ERC20
         let factory: LovelyFactory
         let pair: LovelyPair
+        let pair2: LovelyPair
         let WETHPair: LovelyPair
         let routerEventEmitter: RouterEventEmitter
         beforeEach(async function () {
@@ -41,14 +43,15 @@ describe('LovelyRouter{01,02}', () => {
             const fixture = await pairFixture(wallet)
             token0 = fixture.token0
             token1 = fixture.token1
+            token2 = fixture.token2
             WETH = fixture.WETH
             WETHPartner = fixture.WETHPartner
             factory = fixture.factory
             router = {
-                [RouterVersion.LovelyRouter01]: fixture.router02,
                 [RouterVersion.LovelyRouter02]: fixture.router02
             }[routerVersion as RouterVersion]
             pair = fixture.pair
+            pair2 = fixture.pair2
             WETHPair = fixture.WETHPair
             routerEventEmitter = fixture.routerEventEmitter
         })
@@ -61,6 +64,22 @@ describe('LovelyRouter{01,02}', () => {
             it('factory, WETH', async () => {
                 expect(await router.factory()).to.eq(await factory.getAddress())
                 expect(await router.WETH()).to.eq(await WETH.getAddress())
+            })
+
+            it('pair not exist', async () => {
+                await expect(
+                    router.addLiquidity(
+                        await token0.getAddress(),
+                        ZERO_ADDRESS,
+                        0,
+                        0,
+                        0,
+                        0,
+                        wallet.address,
+                        MaxUint256,
+                        overrides
+                    )
+                ).to.be.revertedWith("LovelyV2Router: PAIR_NOT_EXIST")
             })
 
             it('addLiquidity', async () => {
@@ -97,6 +116,109 @@ describe('LovelyRouter{01,02}', () => {
                     .withArgs(await router.getAddress(), token0Amount, token1Amount)
 
                 expect(await pair.balanceOf(wallet.address)).to.eq(expectedLiquidity - MINIMUM_LIQUIDITY)
+            })
+
+            it('addLiquidity: not optimal 1', async () => {
+                const token0Amount = getBigInt(expandTo18Decimals(1))
+                const token1Amount = getBigInt(expandTo18Decimals(1))
+
+                const expectedLiquidity = getBigInt(expandTo18Decimals(1))
+                await token0.approve(await router.getAddress(), MaxUint256)
+                await token1.approve(await router.getAddress(), MaxUint256)
+                await router.addLiquidity(
+                    await token0.getAddress(),
+                    await token1.getAddress(),
+                    token0Amount,
+                    token1Amount,
+                    0,
+                    0,
+                    wallet.address,
+                    MaxUint256,
+                    overrides
+                )
+                expect(await pair.balanceOf(wallet.address)).to.eq(expectedLiquidity - MINIMUM_LIQUIDITY)
+
+                await expect(router.addLiquidity(
+                    await token0.getAddress(),
+                    await token1.getAddress(),
+                    token0Amount,
+                    token1Amount,
+                    token0Amount,
+                    token1Amount + BigInt(5000),
+                    wallet.address,
+                    MaxUint256,
+                    overrides
+                )).to.be.revertedWith("LovelyV2Router: INSUFFICIENT_B_AMOUNT")
+
+                await expect(router.addLiquidity(
+                    await token0.getAddress(),
+                    await token1.getAddress(),
+                    token0Amount,
+                    token1Amount,
+                    token0Amount,
+                    token1Amount,
+                    wallet.address,
+                    MaxUint256,
+                    overrides
+                )).to.not.be.reverted
+
+            })
+
+            it('addLiquidity: not optimal 2', async () => {
+                const token0Amount = getBigInt(expandTo18Decimals(1))
+                const token1Amount = getBigInt(expandTo18Decimals(1))
+
+                const expectedLiquidity = getBigInt(expandTo18Decimals(1))
+                await token0.approve(await router.getAddress(), MaxUint256)
+                await token1.approve(await router.getAddress(), MaxUint256)
+                await router.addLiquidity(
+                    await token0.getAddress(),
+                    await token1.getAddress(),
+                    token0Amount,
+                    token1Amount,
+                    0,
+                    0,
+                    wallet.address,
+                    MaxUint256,
+                    overrides
+                )
+                expect(await pair.balanceOf(wallet.address)).to.eq(expectedLiquidity - MINIMUM_LIQUIDITY)
+
+                await expect(router.addLiquidity(
+                    await token0.getAddress(),
+                    await token1.getAddress(),
+                    token0Amount + BigInt(5000000),
+                    token1Amount,
+                    token0Amount + BigInt(5000000),
+                    token1Amount,
+                    wallet.address,
+                    MaxUint256,
+                    overrides
+                )).to.be.revertedWith("LovelyV2Router: INSUFFICIENT_A_AMOUNT")
+
+                await expect(router.addLiquidity(
+                    await token0.getAddress(),
+                    await token1.getAddress(),
+                    token0Amount + BigInt(5000000),
+                    token1Amount,
+                    token0Amount,
+                    token1Amount,
+                    wallet.address,
+                    MaxUint256,
+                    overrides
+                )).to.not.be.reverted
+
+                await expect(router.addLiquidity(
+                    await token0.getAddress(),
+                    await token1.getAddress(),
+                    token0Amount,
+                    token1Amount,
+                    token0Amount,
+                    token1Amount,
+                    wallet.address,
+                    MaxUint256,
+                    overrides
+                )).to.not.be.reverted
             })
 
             it('addLiquidityETH', async () => {
@@ -136,6 +258,36 @@ describe('LovelyRouter{01,02}', () => {
                 expect(await WETHPair.balanceOf(wallet.address)).to.eq(expectedLiquidity - MINIMUM_LIQUIDITY)
             })
 
+            it('addLiquidityETH: not optimal 3', async () => {
+                const WETHPartnerAmount = getBigInt(expandTo18Decimals(1))
+                const ETHAmount = getBigInt(expandTo18Decimals(4))
+
+                const expectedLiquidity = getBigInt(expandTo18Decimals(2))
+                await WETHPartner.approve(await router.getAddress(), MaxUint256)
+                await router.addLiquidityETH(
+                    await WETHPartner.getAddress(),
+                    WETHPartnerAmount,
+                    WETHPartnerAmount,
+                    ETHAmount,
+                    wallet.address,
+                    MaxUint256,
+                    { ...overrides, value: ETHAmount }
+                )
+
+                expect(await WETHPair.balanceOf(wallet.address)).to.eq(expectedLiquidity - MINIMUM_LIQUIDITY)
+
+                await expect(router.addLiquidityETH(
+                    await WETHPartner.getAddress(),
+                    WETHPartnerAmount,
+                    WETHPartnerAmount,
+                    ETHAmount,
+                    wallet.address,
+                    MaxUint256,
+                    { ...overrides, value: (ETHAmount + BigInt(100)) }
+                )).to.not.be.rejected
+
+            })
+
             async function addLiquidity(token0Amount: bigint, token1Amount: bigint) {
                 await token0.transfer(await pair.getAddress(), token0Amount)
                 await token1.transfer(await pair.getAddress(), token1Amount)
@@ -149,6 +301,33 @@ describe('LovelyRouter{01,02}', () => {
 
                 const expectedLiquidity = getBigInt(expandTo18Decimals(2))
                 await pair.approve(await router.getAddress(), MaxUint256)
+
+                await expect(
+                    router.removeLiquidity(
+                        await token0.getAddress(),
+                        await token1.getAddress(),
+                        expectedLiquidity - MINIMUM_LIQUIDITY,
+                        token0Amount + BigInt(10000),
+                        0,
+                        wallet.address,
+                        MaxUint256,
+                        overrides
+                    )
+                ).to.be.revertedWith("LovelyV2Router: INSUFFICIENT_A_AMOUNT")
+
+                await expect(
+                    router.removeLiquidity(
+                        await token0.getAddress(),
+                        await token1.getAddress(),
+                        expectedLiquidity - MINIMUM_LIQUIDITY,
+                        0,
+                        token1Amount + BigInt(10000),
+                        wallet.address,
+                        MaxUint256,
+                        overrides
+                    )
+                ).to.be.revertedWith("LovelyV2Router: INSUFFICIENT_B_AMOUNT")
+
                 await expect(
                     router.removeLiquidity(
                         await token0.getAddress(),
@@ -298,6 +477,71 @@ describe('LovelyRouter{01,02}', () => {
                 )
             })
 
+            it('removeLiquidityWithPermit: max', async () => {
+                const token0Amount = getBigInt(expandTo18Decimals(1))
+                const token1Amount = getBigInt(expandTo18Decimals(4))
+                await addLiquidity(token0Amount, token1Amount)
+
+                const expectedLiquidity = getBigInt(expandTo18Decimals(2))
+
+                const nonce = await pair.nonces(wallet.address)
+                const sig = await wallet.signTypedData(
+                    {
+                        name: await pair.name(),
+                        version: '1',
+                        chainId: 31337,
+                        verifyingContract: await pair.getAddress()
+                    },
+                    {
+                        Permit: [
+                            {
+                                name: "owner",
+                                type: "address",
+                            },
+                            {
+                                name: "spender",
+                                type: "address",
+                            },
+                            {
+                                name: "value",
+                                type: "uint256",
+                            },
+                            {
+                                name: "nonce",
+                                type: "uint256",
+                            },
+                            {
+                                name: "deadline",
+                                type: "uint256",
+                            },
+                        ],
+                    },
+                    {
+                        owner: wallet.address,
+                        spender: await router.getAddress(),
+                        value: MaxUint256,
+                        nonce: nonce,
+                        deadline: MaxUint256,
+                    }
+                )
+                const signature = ethers.Signature.from(sig)
+
+                await router.removeLiquidityWithPermit(
+                    await token0.getAddress(),
+                    await token1.getAddress(),
+                    expectedLiquidity - MINIMUM_LIQUIDITY,
+                    0,
+                    0,
+                    wallet.address,
+                    MaxUint256,
+                    true,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                    overrides
+                )
+            })
+
             it('removeLiquidityETHWithPermit', async () => {
                 const WETHPartnerAmount = getBigInt(expandTo18Decimals(1))
                 const ETHAmount = getBigInt(expandTo18Decimals(4))
@@ -358,6 +602,73 @@ describe('LovelyRouter{01,02}', () => {
                     wallet.address,
                     MaxUint256,
                     false,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                    overrides
+                )
+            })
+
+            it('removeLiquidityETHWithPermit: max', async () => {
+                const WETHPartnerAmount = getBigInt(expandTo18Decimals(1))
+                const ETHAmount = getBigInt(expandTo18Decimals(4))
+                await WETHPartner.transfer(await WETHPair.getAddress(), WETHPartnerAmount)
+                await WETH.deposit({ value: ETHAmount })
+                await WETH.transfer(await WETHPair.getAddress(), ETHAmount)
+                await WETHPair.mint(wallet.address, overrides)
+
+                const expectedLiquidity = getBigInt(expandTo18Decimals(2))
+
+                const nonce = await WETHPair.nonces(wallet.address)
+                const sig = await wallet.signTypedData(
+                    {
+                        name: await WETHPair.name(),
+                        version: '1',
+                        chainId: 31337,
+                        verifyingContract: await WETHPair.getAddress()
+                    },
+                    {
+                        Permit: [
+                            {
+                                name: "owner",
+                                type: "address",
+                            },
+                            {
+                                name: "spender",
+                                type: "address",
+                            },
+                            {
+                                name: "value",
+                                type: "uint256",
+                            },
+                            {
+                                name: "nonce",
+                                type: "uint256",
+                            },
+                            {
+                                name: "deadline",
+                                type: "uint256",
+                            },
+                        ],
+                    },
+                    {
+                        owner: wallet.address,
+                        spender: await router.getAddress(),
+                        value: MaxUint256,
+                        nonce: nonce,
+                        deadline: MaxUint256,
+                    }
+                )
+                const signature = ethers.Signature.from(sig)
+
+                await router.removeLiquidityETHWithPermit(
+                    await WETHPartner.getAddress(),
+                    expectedLiquidity - MINIMUM_LIQUIDITY,
+                    0,
+                    0,
+                    wallet.address,
+                    MaxUint256,
+                    true,
                     signature.v,
                     signature.r,
                     signature.s,
@@ -446,6 +757,88 @@ describe('LovelyRouter{01,02}', () => {
                         .withArgs(token0Amount + expectedSwapAmount, token1Amount - outputAmount)
                         .to.emit(pair, 'Swap')
                         .withArgs(await router.getAddress(), expectedSwapAmount, 0, 0, outputAmount, wallet.address)
+                })
+
+                it('ensure', async () => {
+                    await token0.approve(await router.getAddress(), MaxUint256)
+                    await expect(
+                        router.swapTokensForExactTokens(
+                            outputAmount,
+                            MaxUint256,
+                            [await token0.getAddress(), await token1.getAddress()],
+                            wallet.address,
+                            0,
+                            overrides
+                        )
+                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+                    await expect(
+                        router.addLiquidityETH(
+                            await WETHPartner.getAddress(),
+                            0,
+                            0,
+                            0,
+                            wallet.address,
+                            0,
+                            { ...overrides, value: 1000 }
+                        )
+                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+
+                    await expect(
+                        router.addLiquidity(
+                            await token0.getAddress(),
+                            await token1.getAddress(),
+                            0,
+                            0,
+                            0,
+                            0,
+                            wallet.address,
+                            0
+                        )
+                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+                    await expect(
+                        router.swapExactETHForTokens(0, [await WETH.getAddress(), await WETHPartner.getAddress()], wallet.address, 0, {
+                            ...overrides,
+                            value: 0
+                        })
+                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+
+                    await expect(
+                        router.swapTokensForExactETH(
+                            outputAmount,
+                            MaxUint256,
+                            [await WETHPartner.getAddress(), await WETH.getAddress()],
+                            wallet.address,
+                            0,
+                            overrides
+                        )
+                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+
+                    await expect(
+                        router.swapExactTokensForETH(
+                            0,
+                            0,
+                            [await WETHPartner.getAddress(), await WETH.getAddress()],
+                            wallet.address,
+                            0,
+                            overrides
+                        )
+                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+
+                    await expect(
+                        router.swapETHForExactTokens(
+                            outputAmount,
+                            [await WETH.getAddress(), await WETHPartner.getAddress()],
+                            wallet.address,
+                            0,
+                            {
+                                ...overrides,
+                                value: expectedSwapAmount
+                            }
+                        )
+                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+
+
+
                 })
 
                 it('amounts', async () => {

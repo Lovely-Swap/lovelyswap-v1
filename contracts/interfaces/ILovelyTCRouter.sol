@@ -23,6 +23,7 @@ interface ILovelyTCRouter is ILovelyRouter02 {
 		uint256[] rewards;
 		mapping(address user => bool registered) registeredUsers;
 		mapping(address user => uint256 participant) participantIds;
+		mapping(address user => bool participant) tradedUsers;
 		address[] pairs;
 		Participant[] participants;
 		bool sorted;
