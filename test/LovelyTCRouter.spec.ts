@@ -85,7 +85,6 @@ describe('LovelyTCRouter', () => {
                 await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, rewards, pairs))
                     .to.emit(router, "CompetitionCreated").withArgs(1);
                 expect(await router.competitionsLength()).to.be.equal(2);
-                expect(await router.pairToCompetitions(await pair.getAddress(), 1)).to.be.equal(1);
             })
         })
 
@@ -186,7 +185,9 @@ describe('LovelyTCRouter', () => {
                 await expect(router.connect(accounts[2]).setCompetitionFee(BigInt(1))).to.be.reverted;
                 await router.setCompetitionFee(BigInt(1));
                 expect(await router.competitionFee()).to.be.equal(BigInt(1));
-
+              
+                expect((await router.getCompetitionsOfPair(pair.getAddress())).length).to.be.equal(2);
+                expect((await router.getPairs(0)).length).to.be.equal(BigInt(1));
             })
 
             it('trade before competition', async () => {
@@ -207,6 +208,8 @@ describe('LovelyTCRouter', () => {
                     overrides
                 )
 
+                expect((await router.getCompetitionsOfPair(pair.getAddress())).length).to.be.equal(1);
+                expect((await router.getPairs(0)).length).to.be.equal(BigInt(1));
             })
 
 
@@ -229,7 +232,6 @@ describe('LovelyTCRouter', () => {
                     MaxUint256,
                     overrides
                 )
-
             })
 
             it('multiple trades in a competition', async () => {

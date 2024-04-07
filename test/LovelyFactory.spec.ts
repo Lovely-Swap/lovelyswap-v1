@@ -162,9 +162,5 @@ describe('LovelyFactory', () => {
 
         await expect(factory.connect(other).setTradingFees(BigInt(21), BigInt(1))).to.be.revertedWith('Lovely Swap: VALIDATION')
         await expect(factory.connect(other).setTradingFees(BigInt(1), BigInt(21))).to.be.revertedWith('Lovely Swap: VALIDATION')
-
-
     })
-
-
 })

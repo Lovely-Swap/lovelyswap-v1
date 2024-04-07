@@ -13,8 +13,8 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 	uint256[4] private WINNERS = [5, 5, 10, 30];
 
 	Competition[] public competitions;
-	mapping(address pair => uint256[] competitions) public pairToCompetitions;
-	mapping(address account => uint256[] competitions) public userCompetitions;
+	mapping(address pair => uint256[] competitions) private pairToCompetitions;
+	mapping(address account => uint256[] competitions) private userCompetitions;
 
 	uint256 public competitionFee;
 
@@ -32,6 +32,14 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 
 	function getParticipants(uint256 competition) external view returns (Participant[] memory) {
 		return competitions[competition].participants;
+	}
+
+	function getPairs(uint256 competition) external view returns (address[] memory) {
+		return competitions[competition].pairs;
+	}
+
+	function getCompetitionsOfPair(address pair) external view returns (uint[] memory) {
+		return pairToCompetitions[pair];
 	}
 
 	function getRewards(uint256 competition) external view returns (uint256[] memory) {
@@ -75,6 +83,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		competition.rewardToken = rewardToken;
 		competition.owner = msg.sender;
 		competition.rewards = rewards;
+		competition.pairs = pairs;
 		uint256 totalRewards;
 		for (uint256 i = 0; i < rewards.length; i++) {
 			totalRewards += rewards[i] * WINNERS[i];
