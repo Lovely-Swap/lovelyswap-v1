@@ -2,6 +2,13 @@
 
 This project contains smart contracts for Lovely Finance.
 
+**Note:** Trading competition contract has a limit of 500 participants for each competition.
+On average, it takes 7678556 gas to sort 250 participants. 2811580 gas is used for 100 participant. 
+It's highly not recommended to increase the number of participants in the competition over 500 
+(though theoretically, considering nlog(n) complexity of the merge sort, 750 could be handled). 
+If doing so, a block gas limit should be considered.
+**This information must be treated seriously as it could lead to a situation where the competition contract will not be able to process the finalization of a competition.**
+
 ## Requirements
 Nodejs: v18.15.0
 
