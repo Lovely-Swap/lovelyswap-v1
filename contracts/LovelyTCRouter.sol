@@ -31,8 +31,24 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		return competitions.length;
 	}
 
+	function getParticipantsCount(uint256 competition) external view returns (uint256) {
+		return competitions[competition].participants.length;
+	}
+
 	function getParticipants(uint256 competition) external view returns (Participant[] memory) {
 		return competitions[competition].participants;
+	}
+
+	function getParticipantsPaginated(uint256 competition, uint256 start, uint256 limit) external view returns (Participant[] memory) {
+		uint256 length = limit;
+		if (length > competitions[competition].participants.length - start) {
+			length = competitions[competition].participants.length - start;
+		}
+		Participant[] memory _participants = new Participant[](length);
+		for (uint256 i = 0; i < length; i++) {
+			_participants[i] = competitions[competition].participants[start + i];
+		}
+		return _participants;
 	}
 
 	function getPairs(uint256 competition) external view returns (address[] memory) {
