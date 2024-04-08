@@ -8,7 +8,7 @@ import "./interfaces/ILovelyPair.sol";
 import "./libraries/LovelyLibrary.sol";
 
 contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
-	uint256 public constant MAX_PARTICIPANTS = 1000;
+	uint256 public constant MAX_PARTICIPANTS = 500;
 	uint256 private constant DAYS_30 = 30 * 24 * 60 * 60;
 	uint256[] private TOTAL_WINNERS = [5, 10, 20, 50];
 	uint256[4] private WINNERS = [5, 5, 10, 30];
