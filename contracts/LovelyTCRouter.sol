@@ -211,13 +211,14 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 
 	function _logTrade(address pair, uint256 value) internal {
 		for (uint256 i = 0; i < pairToCompetitions[pair].length; i++) {
+			uint256 competitionId = pairToCompetitions[pair][i];
 			if (
-				block.timestamp >= competitions[i].start &&
-				block.timestamp <= competitions[i].end &&
-				competitions[i].participantsCount < MAX_PARTICIPANTS &&
-				competitions[i].registeredUsers[msg.sender]
+				block.timestamp >= competitions[competitionId].start &&
+				block.timestamp <= competitions[competitionId].end &&
+				competitions[competitionId].participantsCount < MAX_PARTICIPANTS &&
+				competitions[competitionId].registeredUsers[msg.sender]
 			) {
-				Competition storage competition = competitions[i];
+				Competition storage competition = competitions[competitionId];
 				uint256 participantId = _getParticipantId(competition);
 				competition.participants[participantId].tradeVolume += value;
 				competition.totalTradeVolume += value;
