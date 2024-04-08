@@ -4,6 +4,7 @@ import { ethers } from "ethers";
 import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import { config as dotEnvConfig } from "dotenv";
+import "hardhat-contract-sizer";
 
 dotEnvConfig();
 
@@ -21,7 +22,7 @@ const config: HardhatUserConfig = {
           },
         },
       },
-      evmVersion: "shanghai",
+      evmVersion: "shanghai"
     },
   },
   networks: {
@@ -31,7 +32,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       accounts: {
         count: 100
-      }
+      },
     },
     bsc_testnet: {
       url: "https://data-seed-prebsc-1-s1.bnbchain.org:8545",

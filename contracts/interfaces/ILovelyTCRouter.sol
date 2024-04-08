@@ -6,6 +6,7 @@ import "./ILovelyRouter02.sol";
 interface ILovelyTCRouter is ILovelyRouter02 {
 	event CompetitionCreated(uint256 indexed id);
 	event ReadyForPayouts(uint256 indexed id);
+
 	struct Participant {
 		address user;
 		uint256 tradeVolume;
@@ -23,9 +24,26 @@ interface ILovelyTCRouter is ILovelyRouter02 {
 		uint256[] rewards;
 		mapping(address user => bool registered) registeredUsers;
 		mapping(address user => uint256 participant) participantIds;
-		mapping(address user => bool participant) tradedUsers;
+		mapping(address user => bool participant) usersWhoTraded;
 		address[] pairs;
 		Participant[] participants;
 		bool sorted;
+		address competitionToken;
 	}
+
+	error NoCompetition();
+	error WinnersNotSelected();
+	error AlreadyClaimed();
+	error FeeTokensForbidden();
+	error NotAWinner();
+	error NotEnded();
+	error AlreadyWithdrawn();
+	error NothingToWithdraw();
+	error AlreadyRegistered();
+	error AlreadySorted();
+	error InvalidRewards();
+	error InvalidFee();
+	error InvalidRange();
+	error RangeTooBig();
+	error NotACompetitionToken();
 }

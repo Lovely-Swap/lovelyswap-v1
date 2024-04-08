@@ -51,6 +51,7 @@ describe('LovelyTCRouter', () => {
         expect(await ethers.provider.getBalance(await router.getAddress())).to.eq(0)
     })
 
+
     describe("TC Router", () => {
         it('factory, WETH', async () => {
             expect(await router.factory()).to.eq(await factory.getAddress())
@@ -71,18 +72,20 @@ describe('LovelyTCRouter', () => {
                 const rewards = [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2), expandTo18Decimals(1)]
                 await token0.approve(await router.getAddress(), expandTo18Decimals(250));
 
-                await expect(router.createCompetition(timestamp - 1, timestamp + 200, token0, rewards, pairs))
-                    .to.be.rejectedWith("LovelyTCRouter: INVALID_RANGE")
-                await expect(router.createCompetition(timestamp + 200, timestamp - 1, token0, rewards, pairs))
-                    .to.be.rejectedWith("LovelyTCRouter: INVALID_RANGE")
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30 + 1, token0, rewards, pairs))
-                    .to.be.rejectedWith("LovelyTCRouter: RANGE_TOO_BIG")
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0,
+                await expect(router.createCompetition(timestamp - 1, timestamp + 200, token0, await pair.token0(), rewards, pairs))
+                    .to.be.revertedWithCustomError(router, "InvalidRange")
+                await expect(router.createCompetition(timestamp + 200, timestamp - 1, token0, await pair.token0(), rewards, pairs))
+                    .to.be.revertedWithCustomError(router, "InvalidRange")
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30 + 1, token0, await pair.token0(), rewards, pairs))
+                    .to.be.revertedWithCustomError(router, "RangeTooBig")
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(),
                     [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2)], pairs))
-                    .to.be.rejectedWith("LovelyTCRouter: WRONG_REWARDS_LENGTH")
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, rewards, pairs))
+                    .to.be.revertedWithCustomError(router, "InvalidRewards")
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, ZERO_ADDRESS, rewards, pairs))
+                    .to.be.revertedWithCustomError(router, "NotACompetitionToken")
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), rewards, pairs))
                     .to.emit(router, "CompetitionCreated").withArgs(0)
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, rewards, pairs))
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), rewards, pairs))
                     .to.emit(router, "CompetitionCreated").withArgs(1);
                 expect(await router.competitionsLength()).to.be.equal(2);
             })
@@ -151,7 +154,7 @@ describe('LovelyTCRouter', () => {
 
                 const pairs = [await pair.getAddress()]
                 const rewards = [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2), expandTo18Decimals(1)]
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, rewards, pairs))
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), rewards, pairs))
                     .to.emit(router, "CompetitionCreated").withArgs(0)
             })
 
@@ -162,8 +165,9 @@ describe('LovelyTCRouter', () => {
                 await token1.connect(account).approve(await router.getAddress(), token1Amount)
 
             }
+
             it('register', async () => {
-                await expect(router.connect(accounts[1]).register(2)).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION")
+                await expect(router.connect(accounts[1]).register(2)).to.be.revertedWithCustomError(router, "NoCompetition")
             })
 
             it('competition fee', async () => {
@@ -172,9 +176,9 @@ describe('LovelyTCRouter', () => {
 
                 const pairs = [await pair.getAddress()]
                 const rewards = [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2), expandTo18Decimals(1)]
-                await expect(router.connect(accounts[1]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, rewards, pairs))
-                    .to.be.revertedWith("LovelyTCRouter: INVALID_FEE")
-                await expect(router.connect(accounts[1]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, rewards, pairs, { value: TC_CREATE_FEE }))
+                await expect(router.connect(accounts[1]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), rewards, pairs))
+                    .to.be.revertedWithCustomError(router, "InvalidFee")
+                await expect(router.connect(accounts[1]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), rewards, pairs, { value: TC_CREATE_FEE }))
                     .to.emit(router, "CompetitionCreated").withArgs(1)
                 const rewardsResult = await router.getRewards(0);
                 expect(rewardsResult[0]).to.be.equal(rewards[0])
@@ -185,7 +189,7 @@ describe('LovelyTCRouter', () => {
                 await expect(router.connect(accounts[2]).setCompetitionFee(BigInt(1))).to.be.reverted;
                 await router.setCompetitionFee(BigInt(1));
                 expect(await router.competitionFee()).to.be.equal(BigInt(1));
-              
+
                 expect((await router.getCompetitionsOfPair(pair.getAddress())).length).to.be.equal(2);
                 expect((await router.getPairs(0)).length).to.be.equal(BigInt(1));
             })
@@ -270,8 +274,8 @@ describe('LovelyTCRouter', () => {
                 const competitionId = 0;
                 mineBlockIncreaseTime(500);
 
-                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWith("LovelyTCRouter: NOT_FINISHED")
-                await expect(router.withdrawRemainings(2)).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION")
+                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWithCustomError(router, "NotEnded")
+                await expect(router.withdrawRemainings(2)).to.be.revertedWithCustomError(router, "NoCompetition")
 
                 const account = accounts[3];
                 const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
@@ -297,10 +301,6 @@ describe('LovelyTCRouter', () => {
             it('withdraw remainings 2', async () => {
                 const competitionId = 0;
                 mineBlockIncreaseTime(500);
-
-                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWith("LovelyTCRouter: NOT_FINISHED")
-                await expect(router.withdrawRemainings(2)).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION")
-
 
                 for (let i = 5; i < 11; i++) {
                     const account = accounts[i];
@@ -328,10 +328,6 @@ describe('LovelyTCRouter', () => {
                 const competitionId = 0;
                 mineBlockIncreaseTime(500);
 
-                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWith("LovelyTCRouter: NOT_FINISHED")
-                await expect(router.withdrawRemainings(2)).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION")
-
-
                 for (let i = 5; i < 16; i++) {
                     const account = accounts[i];
                     const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
@@ -357,10 +353,6 @@ describe('LovelyTCRouter', () => {
             it('withdraw remainings 4', async () => {
                 const competitionId = 0;
                 mineBlockIncreaseTime(500);
-
-                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWith("LovelyTCRouter: NOT_FINISHED")
-                await expect(router.withdrawRemainings(2)).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION")
-
 
                 for (let i = 5; i < 26; i++) {
                     const account = accounts[i];
@@ -436,16 +428,16 @@ describe('LovelyTCRouter', () => {
 
                 await router.withdrawRemainings(competitionId)
                 expect(await token0.balanceOf(router)).to.be.equal(expandTo18Decimals(0))
-                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWith("LovelyTCRouter: ALREADY_WITHDRAWN")
+                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWithCustomError(router, "AlreadyWithdrawn")
 
-                await expect(router.claimByAddress(0, accounts[0])).to.be.revertedWith("LovelyTCRouter: NOT_WINNER");
-                await expect(router.claimByAddress(2, accounts[0])).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION");
+                await expect(router.claimByAddress(0, accounts[0])).to.be.revertedWithCustomError(router, "NotAWinner")
+                await expect(router.claimByAddress(2, accounts[0])).to.be.revertedWithCustomError(router, "NoCompetition")
 
             })
 
             it('competition tests: soldout', async () => {
                 const competitionId = 0;
-                await expect(router.claimById(0, 0)).to.be.revertedWith("LovelyTCRouter: WINNERS_NOT_SELECTED")
+                await expect(router.claimById(0, 0)).to.be.revertedWithCustomError(router, "WinnersNotSelected")
                 mineBlockIncreaseTime(500);
                 token0.mint(expandTo18Decimals(10000000000))
                 token1.mint(expandTo18Decimals(10000000000))
@@ -468,15 +460,15 @@ describe('LovelyTCRouter', () => {
 
                 }
 
-                await expect(router.connect(accounts[5]).register(competitionId)).to.be.rejectedWith("LovelyTCRouter: already registered")
+                await expect(router.connect(accounts[5]).register(competitionId)).to.be.revertedWithCustomError(router, "AlreadyRegistered")
                 expect((await router.competitions(competitionId)).participantsCount).to.be.equal(55)
                 expect((await router.competitionsOf(accounts[5])).length).to.be.equal(1);
 
-                await expect(router.sumUpCompetition(5)).to.be.revertedWith("LovelyTCRouter: NO_COMPETITION");
-                await expect(router.sumUpCompetition(competitionId)).to.be.revertedWith("LovelyTCRouter: COMPETITION_ACTIVE");
+                await expect(router.sumUpCompetition(5)).to.be.revertedWithCustomError(router, "NoCompetition")
+                await expect(router.sumUpCompetition(competitionId)).to.be.revertedWithCustomError(router, "NotEnded");
                 mineBlockIncreaseTime(DAYS_30)
                 await expect(router.sumUpCompetition(competitionId)).to.emit(router, "ReadyForPayouts").withArgs(0)
-                await expect(router.sumUpCompetition(competitionId)).to.be.revertedWith("LovelyTCRouter: ALREADY_SORTED");
+                await expect(router.sumUpCompetition(competitionId)).to.be.revertedWithCustomError(router, "AlreadySorted");
 
 
                 const participants = await router.getParticipants(0);
@@ -487,14 +479,15 @@ describe('LovelyTCRouter', () => {
                 expect(await token0.balanceOf(router)).to.be.equal(expandTo18Decimals(0))
 
                 for (let i = 51; i < 55; i++) {
-                    await expect(router.claimById(0, i)).to.be.revertedWith("LovelyTCRouter: NOT_WINNER")
+                    await expect(router.claimById(0, i)).to.be.revertedWithCustomError(router, "NotAWinner")
                 }
-                await expect(router.claimById(0, 49)).to.be.revertedWith("LovelyTCRouter: ALREADY_CLAIMED")
-                await expect(router.claimById(0, 50)).to.be.revertedWith("LovelyTCRouter: NOT_WINNER")
+                await expect(router.claimById(0, 49)).to.be.revertedWithCustomError(router, "AlreadyClaimed")
+                await expect(router.claimById(0, 50)).to.be.revertedWithCustomError(router, "NotAWinner")
 
-                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWith("LovelyTCRouter: NOTHING TO WITHDRAW");
+                await expect(router.withdrawRemainings(competitionId)).to.be.revertedWithCustomError(router, "NothingToWithdraw")
 
             })
+
 
 
             // it('loadtest', async () => {

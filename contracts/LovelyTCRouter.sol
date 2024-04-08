@@ -4,6 +4,7 @@ pragma solidity =0.8.20;
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "./LovelyRouter02.sol";
 import "./interfaces/ILovelyTCRouter.sol";
+import "./interfaces/ILovelyPair.sol";
 import "./libraries/LovelyLibrary.sol";
 
 contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
@@ -67,16 +68,22 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		uint256 start,
 		uint256 end,
 		address rewardToken,
+		address competitionToken,
 		uint256[] memory rewards,
 		address[] memory pairs
 	) external payable {
 		if (msg.sender != owner()) {
-			require(msg.value == competitionFee, "LovelyTCRouter: INVALID_FEE");
+			if(msg.value != competitionFee) revert InvalidFee();
 			TransferHelper.safeTransferETH(owner(), msg.value);
 		}
-		require(start > block.timestamp && end > block.timestamp, "LovelyTCRouter: INVALID_RANGE");
-		require(end - start <= DAYS_30, "LovelyTCRouter: RANGE_TOO_BIG");
-		require(rewards.length == 4, "LovelyTCRouter: WRONG_REWARDS_LENGTH");
+		if(start < block.timestamp || end < block.timestamp) revert InvalidRange();
+		if(end - start > DAYS_30) revert RangeTooBig();
+		if(rewards.length != 4) revert InvalidRewards();
+		for (uint256 i = 0; i < pairs.length; i++) {
+			address token0 = ILovelyPair(pairs[i]).token0();
+			address token1 = ILovelyPair(pairs[i]).token1();
+			if(token0 != competitionToken && token1 != competitionToken) revert NotACompetitionToken();
+		}
 		Competition storage competition = competitions.push();
 		competition.start = start;
 		competition.end = end;
@@ -84,6 +91,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		competition.owner = msg.sender;
 		competition.rewards = rewards;
 		competition.pairs = pairs;
+		competition.competitionToken = competitionToken;
 		uint256 totalRewards;
 		for (uint256 i = 0; i < rewards.length; i++) {
 			totalRewards += rewards[i] * WINNERS[i];
@@ -96,23 +104,27 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 	}
 
 	function register(uint256 competition) external {
-		require(competitions.length > competition, "LovelyTCRouter: NO_COMPETITION");
-		require(!competitions[competition].registeredUsers[msg.sender], "LovelyTCRouter: already registered");
+		if (competition >= competitions.length) revert NoCompetition();
+		if (competitions[competition].registeredUsers[msg.sender]) revert AlreadyRegistered();
 		competitions[competition].registeredUsers[msg.sender] = true;
 		userCompetitions[msg.sender].push(competition);
 	}
 
 	function sumUpCompetition(uint256 competition) external {
-		require(competitions.length > competition, "LovelyTCRouter: NO_COMPETITION");
-		require(!competitions[competition].sorted, "LovelyTCRouter: ALREADY_SORTED");
-		require(block.timestamp > competitions[competition].end, "LovelyTCRouter: COMPETITION_ACTIVE");
-		_mergeSort(competitions[competition].participants, 0, competitions[competition].participants.length - 1);
+		if (competition >= competitions.length) revert NoCompetition();
+		if (competitions[competition].sorted) revert AlreadySorted();
+		if (block.timestamp <= competitions[competition].end) revert NotEnded();
+		competitions[competition].participants = _mergeSort(
+			competitions[competition].participants,
+			0,
+			competitions[competition].participants.length - 1
+		);
 		competitions[competition].sorted = true;
 		emit ReadyForPayouts(competition);
 	}
 
 	function claimByAddress(uint256 competition, address participantAddress) external {
-		require(competitions.length > competition, "LovelyTCRouter: NO_COMPETITION");
+		if (competition >= competitions.length) revert NoCompetition();
 		uint256 totalWinners = competitions[competition].participants.length > TOTAL_WINNERS[3]
 			? TOTAL_WINNERS[3]
 			: competitions[competition].participants.length;
@@ -122,7 +134,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 				return;
 			}
 		}
-		revert("LovelyTCRouter: NOT_WINNER");
+		revert NotAWinner();
 	}
 
 	function claimById(uint256 competition, uint256 participantId) external {
@@ -130,13 +142,13 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 	}
 
 	function withdrawRemainings(uint256 competition) external {
-		require(competitions.length > competition, "LovelyTCRouter: NO_COMPETITION");
-		require(competitions[competition].end < block.timestamp, "LovelyTCRouter: NOT_FINISHED");
-		require(!competitions[competition].leftoversWithdrawn, "LovelyTCRouter: ALREADY_WITHDRAWN");
+		if (competition >= competitions.length) revert NoCompetition();
+		if (competitions[competition].end > block.timestamp) revert NotEnded();
+		if (competitions[competition].leftoversWithdrawn) revert AlreadyWithdrawn();
 		competitions[competition].leftoversWithdrawn = true;
 		uint256 winners = competitions[competition].participants.length;
-		require(winners < 50, "LovelyTCRouter: NOTHING TO WITHDRAW");
-		uint256 amount = _getLefrowers(competition);
+		if (winners >= 50) revert NothingToWithdraw();
+		uint256 amount = _getLeftovers(competition);
 		TransferHelper.safeTransfer(competitions[competition].rewardToken, competitions[competition].owner, amount);
 	}
 
@@ -153,7 +165,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 			ILovelyPair(pair).swap(amount0Out, amount1Out, to, new bytes(0));
 			//log trades for competitions
 			if (pairToCompetitions[pair].length != 0) {
-				_logTrade(pair, input == token0 ? amounts[i] : amounts[i + 1]);
+				_logTrade(pair, input, amounts[i], amounts[i + 1]);
 			}
 		}
 	}
@@ -168,10 +180,10 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		} else if (participantId < TOTAL_WINNERS[3]) {
 			return competitions[competition].rewards[3];
 		}
-		revert("LovelyTCRouter: NOT_WINNER");
+		revert NotAWinner();
 	}
 
-	function _getLefrowers(uint256 competition) internal view returns (uint256) {
+	function _getLeftovers(uint256 competition) internal view returns (uint256) {
 		uint256 winners = competitions[competition].participants.length;
 		if (winners < TOTAL_WINNERS[0]) {
 			return
@@ -194,8 +206,8 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 	}
 
 	function _claim(uint256 competition, uint256 participantId) internal {
-		require(competitions[competition].sorted, "LovelyTCRouter: WINNERS_NOT_SELECTED");
-		require(!competitions[competition].participants[participantId].claimed, "LovelyTCRouter: ALREADY_CLAIMED");
+		if (!competitions[competition].sorted) revert WinnersNotSelected();
+		if (competitions[competition].participants[participantId].claimed) revert AlreadyClaimed();
 		Participant storage participant = competitions[competition].participants[participantId];
 		participant.claimed = true;
 		uint256 reward = _getReward(competition, participantId);
@@ -206,10 +218,10 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		uint256 balanceBefore = IERC20(token).balanceOf(address(this));
 		TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
 		uint256 balanceAfter = IERC20(token).balanceOf(address(this));
-		require(balanceAfter - balanceBefore == amount, "LovelyTCRouter: FEE TOKENS NOT ALLOWED");
+		if (balanceAfter - balanceBefore != amount) revert FeeTokensForbidden();
 	}
 
-	function _logTrade(address pair, uint256 value) internal {
+	function _logTrade(address pair, address input, uint256 valueIn, uint256 valueOut) internal {
 		for (uint256 i = 0; i < pairToCompetitions[pair].length; i++) {
 			uint256 competitionId = pairToCompetitions[pair][i];
 			if (
@@ -219,6 +231,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 				competitions[competitionId].registeredUsers[msg.sender]
 			) {
 				Competition storage competition = competitions[competitionId];
+				uint256 value = input == competition.competitionToken ? valueIn : valueOut;
 				uint256 participantId = _getParticipantId(competition);
 				competition.participants[participantId].tradeVolume += value;
 				competition.totalTradeVolume += value;
@@ -228,18 +241,18 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 
 	function _getParticipantId(Competition storage competition) internal returns (uint256) {
 		uint256 participant = competition.participantIds[msg.sender];
-		if (competition.tradedUsers[msg.sender]) {
+		if (competition.usersWhoTraded[msg.sender]) {
 			return participant;
 		}
 		competition.participantIds[msg.sender] = competition.participantsCount++;
-		competition.tradedUsers[msg.sender] = true;
+		competition.usersWhoTraded[msg.sender] = true;
 		Participant storage p = competition.participants.push();
 		p.user = msg.sender;
 		return competition.participantsCount - 1;
 	}
 
 	// Internal merge sort function
-	function _mergeSort(Participant[] storage arr, uint256 left, uint256 right) internal {
+	function _mergeSort(Participant[] memory arr, uint256 left, uint256 right) internal returns (Participant[] memory) {
 		if (left < right) {
 			uint256 middle = left + (right - left) / 2;
 
@@ -248,10 +261,11 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 
 			_merge(arr, left, middle, right);
 		}
+		return arr;
 	}
 
 	// Internal function to merge the sorted halves
-	function _merge(Participant[] storage arr, uint256 left, uint256 middle, uint256 right) private {
+	function _merge(Participant[] memory arr, uint256 left, uint256 middle, uint256 right) private {
 		uint256 n1 = middle - left + 1;
 		uint256 n2 = right - middle;
 
