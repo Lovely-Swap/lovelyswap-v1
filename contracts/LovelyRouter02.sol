@@ -230,9 +230,13 @@ contract LovelyRouter02 is ILovelyRouter02 {
 			uint256 amountOut = amounts[i + 1];
 			(uint256 amount0Out, uint256 amount1Out) = input == token0 ? (uint(0), amountOut) : (amountOut, uint(0));
 			address to = i < path.length - 2 ? LovelyLibrary.pairFor(factory, output, path[i + 2]) : _to;
-			ILovelyPair(LovelyLibrary.pairFor(factory, input, output)).swap(amount0Out, amount1Out, to, new bytes(0));
+			address pair = LovelyLibrary.pairFor(factory, input, output);
+			ILovelyPair(pair).swap(amount0Out, amount1Out, to, new bytes(0));
+			_postTrade(pair, input, amounts, i);
 		}
 	}
+
+	function _postTrade(address pair, address input, uint256[] memory amounts, uint256 position) internal virtual {}
 
 	function swapExactTokensForTokens(
 		uint256 amountIn,

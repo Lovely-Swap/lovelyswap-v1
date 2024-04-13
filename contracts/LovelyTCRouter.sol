@@ -8,7 +8,7 @@ import "./interfaces/ILovelyPair.sol";
 import "./libraries/LovelyLibrary.sol";
 
 contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
-	uint256 public constant MAX_PARTICIPANTS = 500;
+	uint256 public maxParticipants;
 	uint256 private constant DAYS_30 = 30 * 24 * 60 * 60;
 	uint256[] private TOTAL_WINNERS = [5, 10, 20, 50];
 	uint256[4] private WINNERS = [5, 5, 10, 30];
@@ -22,24 +22,26 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 	constructor(
 		address _factory,
 		address _WETH,
-		uint256 _competitionFee
+		uint256 _competitionFee,
+		uint256 _maxParticipants
 	) LovelyRouter02(_factory, _WETH) Ownable(msg.sender) {
 		competitionFee = _competitionFee;
+		maxParticipants = _maxParticipants;
 	}
 
 	function competitionsLength() external view returns (uint256) {
 		return competitions.length;
 	}
 
-	function getParticipantsCount(uint256 competition) external view returns (uint256) {
-		return competitions[competition].participants.length;
-	}
-
 	function getParticipants(uint256 competition) external view returns (Participant[] memory) {
 		return competitions[competition].participants;
 	}
 
-	function getParticipantsPaginated(uint256 competition, uint256 start, uint256 limit) external view returns (Participant[] memory) {
+	function getParticipantsPaginated(
+		uint256 competition,
+		uint256 start,
+		uint256 limit
+	) external view returns (Participant[] memory) {
 		uint256 length = limit;
 		if (length > competitions[competition].participants.length - start) {
 			length = competitions[competition].participants.length - start;
@@ -55,7 +57,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		return competitions[competition].pairs;
 	}
 
-	function getCompetitionsOfPair(address pair) external view returns (uint[] memory) {
+	function getCompetitionsOfPair(address pair) external view returns (uint256[] memory) {
 		return pairToCompetitions[pair];
 	}
 
@@ -89,16 +91,17 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		address[] memory pairs
 	) external payable {
 		if (msg.sender != owner()) {
-			if(msg.value != competitionFee) revert InvalidFee();
+			if (msg.value != competitionFee) revert InvalidFee();
 			TransferHelper.safeTransferETH(owner(), msg.value);
 		}
-		if(start < block.timestamp || end < block.timestamp) revert InvalidRange();
-		if(end - start > DAYS_30) revert RangeTooBig();
-		if(rewards.length != 4) revert InvalidRewards();
+		if (start < block.timestamp || end < block.timestamp) revert InvalidRange();
+		if (end - start > DAYS_30) revert RangeTooBig();
+		if (rewards.length != 4) revert InvalidRewards();
+		if (pairs.length == 0) revert PairsNotProvided();
 		for (uint256 i = 0; i < pairs.length; i++) {
 			address token0 = ILovelyPair(pairs[i]).token0();
 			address token1 = ILovelyPair(pairs[i]).token1();
-			if(token0 != competitionToken && token1 != competitionToken) revert NotACompetitionToken();
+			if (token0 != competitionToken && token1 != competitionToken) revert NotACompetitionToken();
 		}
 		Competition storage competition = competitions.push();
 		competition.start = start;
@@ -112,7 +115,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		for (uint256 i = 0; i < rewards.length; i++) {
 			totalRewards += rewards[i] * WINNERS[i];
 		}
-		_feeIn(rewardToken, totalRewards);
+		_transferRewardsIn(rewardToken, totalRewards);
 		for (uint256 i = 0; i < pairs.length; i++) {
 			pairToCompetitions[pairs[i]].push(competitions.length - 1);
 		}
@@ -168,21 +171,9 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		TransferHelper.safeTransfer(competitions[competition].rewardToken, competitions[competition].owner, amount);
 	}
 
-	// **** SWAP ****
-	// requires the initial amount to have already been sent to the first pair
-	function _swap(uint[] memory amounts, address[] memory path, address _to) internal virtual override {
-		for (uint256 i; i < path.length - 1; i++) {
-			(address input, address output) = (path[i], path[i + 1]);
-			(address token0, ) = LovelyLibrary.sortTokens(input, output);
-			uint256 amountOut = amounts[i + 1];
-			(uint256 amount0Out, uint256 amount1Out) = input == token0 ? (uint(0), amountOut) : (amountOut, uint(0));
-			address to = i < path.length - 2 ? LovelyLibrary.pairFor(factory, output, path[i + 2]) : _to;
-			address pair = LovelyLibrary.pairFor(factory, input, output);
-			ILovelyPair(pair).swap(amount0Out, amount1Out, to, new bytes(0));
-			//log trades for competitions
-			if (pairToCompetitions[pair].length != 0) {
-				_logTrade(pair, input, amounts[i], amounts[i + 1]);
-			}
+	function _postTrade(address pair, address input, uint256[] memory amounts, uint256 position) internal override {
+		if (pairToCompetitions[pair].length != 0) {
+			_logTrade(pair, input, amounts[position], amounts[position + 1]);
 		}
 	}
 
@@ -230,7 +221,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		TransferHelper.safeTransfer(competitions[competition].rewardToken, participant.user, reward);
 	}
 
-	function _feeIn(address token, uint256 amount) internal {
+	function _transferRewardsIn(address token, uint256 amount) internal {
 		uint256 balanceBefore = IERC20(token).balanceOf(address(this));
 		TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
 		uint256 balanceAfter = IERC20(token).balanceOf(address(this));
@@ -243,7 +234,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 			if (
 				block.timestamp >= competitions[competitionId].start &&
 				block.timestamp <= competitions[competitionId].end &&
-				competitions[competitionId].participantsCount < MAX_PARTICIPANTS &&
+				competitions[competitionId].participantsCount < maxParticipants &&
 				competitions[competitionId].registeredUsers[msg.sender]
 			) {
 				Competition storage competition = competitions[competitionId];

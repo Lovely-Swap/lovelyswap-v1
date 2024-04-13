@@ -42,6 +42,7 @@ interface ILovelyTCRouter is ILovelyRouter02 {
 	error AlreadyRegistered();
 	error AlreadySorted();
 	error InvalidRewards();
+	error PairsNotProvided();
 	error InvalidFee();
 	error InvalidRange();
 	error RangeTooBig();
