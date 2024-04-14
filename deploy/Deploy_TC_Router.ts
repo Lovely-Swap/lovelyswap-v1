@@ -9,9 +9,10 @@ async function main() {
 
     const factory = process.env.FACTORY_ADDRESS as string;
     const wrappedNative = process.env.WRAPPED_NATIVE_ADDRESS as string;
-    const competitionFee = process.env.WRAPPED_NATIVE_ADDRESS as string;
+    const competitionFee = process.env.COMPETITION_FEE as string;
+    const maxCompetitior = process.env.MAX_COMPETITORS as string;
 
-    const router = await new LovelyTCRouter__factory(deployer).deploy(factory, wrappedNative, BigInt(competitionFee));
+    const router = await new LovelyTCRouter__factory(deployer).deploy(factory, wrappedNative, BigInt(competitionFee), BigInt(maxCompetitior));
 
     console.log(`Proxy deployed to ${await router.getAddress()}`);
 }

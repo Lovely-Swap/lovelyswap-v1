@@ -106,5 +106,5 @@ npm run verify_TC_router <contract_address> -- --network <network> "<factory_add
 ```
 Example:
 ```
-npm run verify_TC_router 0xb4EF6AA882ED1B0b320B202f4f824b45F7d67191  -- --network bsc_testnet "0xD44C0f09B2da313dA1099c89215d8c1ff18c8659" "0x5b3e2bc1da86ff6235d9ead4504d598cae77dbcb
+npm run verify_TC_router 0x3B847Ce572D5b8B34d587B54495418F9cf2e94e7  -- --network bsc_testnet "0xAEC88102B726f1177dA1af769bEb0CbaDc0ED67B" "0x5b3e2bc1da86ff6235d9ead4504d598cae77dbcb" 0 500
 ```
