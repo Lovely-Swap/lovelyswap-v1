@@ -79,7 +79,7 @@ describe('LovelyRouter{01,02}', () => {
                         MaxUint256,
                         overrides
                     )
-                ).to.be.revertedWith("LovelyV2Router: PAIR_NOT_EXIST")
+                ).to.be.revertedWithCustomError(router, "PairNotExist")
             })
 
             it('addLiquidity', async () => {
@@ -148,7 +148,7 @@ describe('LovelyRouter{01,02}', () => {
                     wallet.address,
                     MaxUint256,
                     overrides
-                )).to.be.revertedWith("LovelyV2Router: INSUFFICIENT_B_AMOUNT")
+                )).to.be.revertedWithCustomError(router, "InsufficientBAmount")
 
                 await expect(router.addLiquidity(
                     await token0.getAddress(),
@@ -194,7 +194,7 @@ describe('LovelyRouter{01,02}', () => {
                     wallet.address,
                     MaxUint256,
                     overrides
-                )).to.be.revertedWith("LovelyV2Router: INSUFFICIENT_A_AMOUNT")
+                )).to.be.revertedWithCustomError(router, "InsufficientAAmount")
 
                 await expect(router.addLiquidity(
                     await token0.getAddress(),
@@ -313,7 +313,7 @@ describe('LovelyRouter{01,02}', () => {
                         MaxUint256,
                         overrides
                     )
-                ).to.be.revertedWith("LovelyV2Router: INSUFFICIENT_A_AMOUNT")
+                ).to.be.revertedWithCustomError(router, "InsufficientAAmount")
 
                 await expect(
                     router.removeLiquidity(
@@ -326,7 +326,7 @@ describe('LovelyRouter{01,02}', () => {
                         MaxUint256,
                         overrides
                     )
-                ).to.be.revertedWith("LovelyV2Router: INSUFFICIENT_B_AMOUNT")
+                ).to.be.revertedWithCustomError(router, "InsufficientBAmount")
 
                 await expect(
                     router.removeLiquidity(
@@ -770,7 +770,7 @@ describe('LovelyRouter{01,02}', () => {
                             0,
                             overrides
                         )
-                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+                    ).to.be.revertedWithCustomError(router, "Expired")
                     await expect(
                         router.addLiquidityETH(
                             await WETHPartner.getAddress(),
@@ -781,7 +781,7 @@ describe('LovelyRouter{01,02}', () => {
                             0,
                             { ...overrides, value: 1000 }
                         )
-                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+                    ).to.be.revertedWithCustomError(router, "Expired")
 
                     await expect(
                         router.addLiquidity(
@@ -794,13 +794,13 @@ describe('LovelyRouter{01,02}', () => {
                             wallet.address,
                             0
                         )
-                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+                    ).to.be.revertedWithCustomError(router, "Expired")
                     await expect(
                         router.swapExactETHForTokens(0, [await WETH.getAddress(), await WETHPartner.getAddress()], wallet.address, 0, {
                             ...overrides,
                             value: 0
                         })
-                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+                    ).to.be.revertedWithCustomError(router, "Expired")
 
                     await expect(
                         router.swapTokensForExactETH(
@@ -811,7 +811,7 @@ describe('LovelyRouter{01,02}', () => {
                             0,
                             overrides
                         )
-                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+                    ).to.be.revertedWithCustomError(router, "Expired")
 
                     await expect(
                         router.swapExactTokensForETH(
@@ -822,7 +822,7 @@ describe('LovelyRouter{01,02}', () => {
                             0,
                             overrides
                         )
-                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+                    ).to.be.revertedWithCustomError(router, "Expired")
 
                     await expect(
                         router.swapETHForExactTokens(
@@ -835,7 +835,7 @@ describe('LovelyRouter{01,02}', () => {
                                 value: expectedSwapAmount
                             }
                         )
-                    ).to.be.revertedWith("LovelyV2Router: EXPIRED")
+                    ).to.be.revertedWithCustomError(router, "Expired")
 
 
 

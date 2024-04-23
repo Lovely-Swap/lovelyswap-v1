@@ -81,6 +81,9 @@ describe('LovelyFactory', () => {
     it("constructor rever", async () => {
         await expect(new LovelyFactory__factory(wallet).deploy(wallet.address, await feeToken.getAddress(), 10, 21)).to.be.revertedWith("Lovely Swap: VALIDATION")
         await expect(new LovelyFactory__factory(wallet).deploy(wallet.address, await feeToken.getAddress(), 21, 10)).to.be.revertedWith("Lovely Swap: VALIDATION")
+        await expect(new LovelyFactory__factory(wallet).deploy(wallet.address, ZERO_ADDRESS, 20, 10)).to.be.revertedWith("Lovely Swap: VALIDATION")
+        await expect(new LovelyFactory__factory(wallet).deploy(ZERO_ADDRESS, await feeToken.getAddress(), 20, 10)).to.be.revertedWith("Lovely Swap: VALIDATION")
+
     })
 
     it("allow token", async () => {
@@ -94,14 +97,18 @@ describe('LovelyFactory', () => {
     })
 
     it('whitelist token', async () => {
-        const tokens: [string, string, string, string, string, string, string] = [
+        const tokens = [
             '0x3000000000000000000000000000000000000000',
             '0x4000000000000000000000000000000000000000',
             '0x5000000000000000000000000000000000000000',
             '0x6000000000000000000000000000000000000000',
             '0x7000000000000000000000000000000000000000',
             '0x8000000000000000000000000000000000000000',
-            '0x9000000000000000000000000000000000000000'
+            '0x9000000000000000000000000000000000000000',
+            '0x1000000000000000000000000000000000000000',
+            '0x1100000000000000000000000000000000000000',
+            '0x1200000000000000000000000000000000000000',
+            '0x1300000000000000000000000000000000000000',
         ]
 
         const timestamp = (await ethers.provider.getBlock('latest'))!.timestamp
@@ -132,6 +139,15 @@ describe('LovelyFactory', () => {
         await expect(factory.allowToken(tokens[6], timestamp + days7 / 2)).to.emit(factory, 'TokenAllowed')
         await expect(factory.connect(other).createPair(tokens[5], tokens[6], timestamp + days7 / 2 + 10)).to.be.revertedWith("Lovely Swap: FORBIDDEN")
 
+        await expect(factory.allowToken(tokens[7], timestamp + days7 / 2)).to.emit(factory, 'TokenAllowed')
+        await expect(factory.connect(other).allowToken(tokens[8], timestamp + days7)).to.emit(factory, 'TokenAllowed')
+        await expect(factory.connect(other).createPair(tokens[7], tokens[8], timestamp + days7 / 2 + 10)).to.be.revertedWith("Lovely Swap: FORBIDDEN")
+
+
+        await expect(factory.allowToken(tokens[9], 0)).to.emit(factory, 'TokenAllowed')
+        await expect(factory.connect(other).allowToken(tokens[10], timestamp + days7 )).to.emit(factory, 'TokenAllowed')
+        await expect(factory.createPair(tokens[9], tokens[10], timestamp + days7 - 10)).to.be.revertedWith("Lovely Swap: FORBIDDEN")
+
 
     })
 
@@ -144,6 +160,7 @@ describe('LovelyFactory', () => {
 
     it('ownership', async () => {
         await expect(factory.connect(other).setFeeToSetter(other.address)).to.be.revertedWith('Lovely Swap: FORBIDDEN')
+        await expect(factory.setFeeToSetter(ZERO_ADDRESS)).to.be.revertedWith('Lovely Swap: VALIDATION')
         await factory.setFeeToSetter(other.address)
         expect(await factory.feeToSetter()).to.eq(other.address)
 
@@ -152,6 +169,8 @@ describe('LovelyFactory', () => {
         expect(await factory.listingFee()).to.be.equal(BigInt(1));
 
         await expect(factory.setFeeToken(wallet.address)).to.be.revertedWith('Lovely Swap: FORBIDDEN')
+        await expect(factory.connect(other).setFeeToken(ZERO_ADDRESS)).to.be.revertedWith('Lovely Swap: VALIDATION')
+
         await factory.connect(other).setFeeToken(wallet.address)
         expect(await factory.feeToken()).to.be.equal(wallet.address);
 

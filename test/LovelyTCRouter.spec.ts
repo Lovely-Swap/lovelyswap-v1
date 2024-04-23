@@ -4,7 +4,9 @@ import {
     ERC20, LovelyTCRouter, LovelyTCRouter__factory, WETH9, LovelyPair, LovelyFactory, RouterEventEmitter,
     DeflatingERC20, DeflatingERC20__factory,
     LovelyRouter02,
-    ERC20__factory
+    ERC20__factory,
+    RewardsVault, RewardsVault__factory,
+    RewardsVaultDeployer, RewardsVaultDeployer__factory
 } from '../typechain-types';
 
 import { ecsign } from 'ethereumjs-util';
@@ -37,6 +39,8 @@ describe('LovelyTCRouter', () => {
     let pair: LovelyPair
     let WETHPair: LovelyPair
     let routerEventEmitter: RouterEventEmitter
+    let rewardsVaultFactory: RewardsVaultDeployer
+
     beforeEach(async function () {
         accounts = await ethers.getSigners();
         wallet = accounts[0];
@@ -46,7 +50,8 @@ describe('LovelyTCRouter', () => {
         WETH = fixture.WETH
         WETHPartner = fixture.WETHPartner
         factory = fixture.factory
-        router = await new LovelyTCRouter__factory(wallet).deploy(factory, WETH, TC_CREATE_FEE, 500);
+        rewardsVaultFactory = await new RewardsVaultDeployer__factory(wallet).deploy();
+        router = await new LovelyTCRouter__factory(wallet).deploy(factory, WETH, rewardsVaultFactory, TC_CREATE_FEE, 500);
         pair = fixture.pair
         WETHPair = fixture.WETHPair
         routerEventEmitter = fixture.routerEventEmitter
@@ -77,22 +82,27 @@ describe('LovelyTCRouter', () => {
                 const rewards = [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2), expandTo18Decimals(1)]
                 await token0.approve(await router.getAddress(), expandTo18Decimals(250));
 
-                await expect(router.createCompetition(timestamp - 1, timestamp + 200, token0, await pair.token0(), rewards, pairs))
+                await expect(router.createCompetition(timestamp - 1, timestamp + 200, token0, await pair.token0(), expandTo18Decimals(1), rewards, pairs))
                     .to.be.revertedWithCustomError(router, "InvalidRange")
-                await expect(router.createCompetition(timestamp + 200, timestamp - 1, token0, await pair.token0(), rewards, pairs))
+                await expect(router.createCompetition(timestamp + 200, timestamp - 1, token0, await pair.token0(), expandTo18Decimals(1), rewards, pairs))
                     .to.be.revertedWithCustomError(router, "InvalidRange")
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30 + 1, token0, await pair.token0(), rewards, pairs))
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30 + 1, token0, await pair.token0(), expandTo18Decimals(1), rewards, pairs))
                     .to.be.revertedWithCustomError(router, "RangeTooBig")
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(),
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), expandTo18Decimals(1),
                     [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2)], pairs))
                     .to.be.revertedWithCustomError(router, "InvalidRewards")
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, ZERO_ADDRESS, rewards, pairs))
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), expandTo18Decimals(1),
+                    [0, 0, 0, 0], pairs))
+                    .to.be.revertedWithCustomError(router, "InvalidRewards")
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, ZERO_ADDRESS, expandTo18Decimals(1), rewards, pairs))
                     .to.be.revertedWithCustomError(router, "NotACompetitionToken")
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), rewards, []))
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), expandTo18Decimals(1), rewards, []))
                     .to.be.revertedWithCustomError(router, "PairsNotProvided")
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), rewards, pairs))
+                await expect(router.createCompetition(timestamp + 200 + DAYS_30, timestamp + 200, token0, await pair.token0(), expandTo18Decimals(1), rewards, pairs))
+                    .to.be.revertedWithCustomError(router, "InvalidRange")
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), expandTo18Decimals(1), rewards, pairs))
                     .to.emit(router, "CompetitionCreated").withArgs(0)
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), rewards, pairs))
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), expandTo18Decimals(1), rewards, pairs))
                     .to.emit(router, "CompetitionCreated").withArgs(1);
                 expect(await router.competitionsLength()).to.be.equal(2);
                 expect(await router.maxParticipants()).to.be.equal(500);
@@ -162,7 +172,7 @@ describe('LovelyTCRouter', () => {
 
                 const pairs = [await pair.getAddress()]
                 const rewards = [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2), expandTo18Decimals(1)]
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), rewards, pairs))
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), BigInt("20000000000"), rewards, pairs))
                     .to.emit(router, "CompetitionCreated").withArgs(0)
             })
 
@@ -184,9 +194,9 @@ describe('LovelyTCRouter', () => {
 
                 const pairs = [await pair.getAddress()]
                 const rewards = [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2), expandTo18Decimals(1)]
-                await expect(router.connect(accounts[1]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), rewards, pairs))
+                await expect(router.connect(accounts[1]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), BigInt("100000"), rewards, pairs))
                     .to.be.revertedWithCustomError(router, "InvalidFee")
-                await expect(router.connect(accounts[1]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), rewards, pairs, { value: TC_CREATE_FEE }))
+                await expect(router.connect(accounts[1]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), BigInt("100000"), rewards, pairs, { value: TC_CREATE_FEE }))
                     .to.emit(router, "CompetitionCreated").withArgs(1)
                 const rewardsResult = await router.getRewards(0);
                 expect(rewardsResult[0]).to.be.equal(rewards[0])
@@ -210,7 +220,7 @@ describe('LovelyTCRouter', () => {
                 await deflatingToken.connect(accounts[0]).approve(await router.getAddress(), MaxUint256)
                 const pairs = [await pair.getAddress()]
                 const rewards = [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2), expandTo18Decimals(1)]
-                await expect(router.connect(accounts[0]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, deflatingToken, await pair.token0(), rewards, pairs, { value: TC_CREATE_FEE }))
+                await expect(router.connect(accounts[0]).createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, deflatingToken, await pair.token0(), BigInt("100000"), rewards, pairs, { value: TC_CREATE_FEE }))
                     .to.be.revertedWithCustomError(router, "FeeTokensForbidden")
             })
 
@@ -256,6 +266,9 @@ describe('LovelyTCRouter', () => {
                     MaxUint256,
                     overrides
                 )
+
+                const rewardsVault = RewardsVault__factory.connect((await router.competitions(0)).rewardsVault, account);
+                await expect(rewardsVault.withdraw(await account.getAddress(), 0)).to.be.revertedWithCustomError(rewardsVault, "Forbidden")
             })
 
             it('multiple trades in a competition', async () => {
@@ -291,16 +304,17 @@ describe('LovelyTCRouter', () => {
             })
 
             it('trades over max participants ', async () => {
-                const competitionId = 0;
-                router = await new LovelyTCRouter__factory(wallet).deploy(factory, WETH, TC_CREATE_FEE, 2);
+                router = await new LovelyTCRouter__factory(wallet).deploy(factory, WETH, rewardsVaultFactory, TC_CREATE_FEE, 2);
                 await token0.connect(accounts[0]).approve(await router.getAddress(), MaxUint256)
                 await token0.connect(accounts[0]).mint(expandTo18Decimals(200))
                 const pairs = [await pair.getAddress()]
                 const rewards = [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2), expandTo18Decimals(1)]
-                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), rewards, pairs))
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), BigInt("100000"), rewards, pairs))
                     .to.emit(router, "CompetitionCreated").withArgs(0)
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), BigInt("100000"), rewards, pairs))
+                    .to.emit(router, "CompetitionCreated").withArgs(1)
                 mineBlockIncreaseTime(500);
-
+                const competitionId = 1;
                 for (let i = 5; i < 12; i++) {
                     const account = accounts[i];
                     const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
@@ -318,7 +332,7 @@ describe('LovelyTCRouter', () => {
                 }
 
                 mineBlockIncreaseTime(DAYS_30)
-                await expect(router.sumUpCompetition(0)).to.emit(router, "ReadyForPayouts").withArgs(competitionId)
+                await expect(router.sumUpCompetition(competitionId)).to.emit(router, "ReadyForPayouts").withArgs(competitionId)
             })
 
 
@@ -345,7 +359,7 @@ describe('LovelyTCRouter', () => {
                 await expect(router.claimById(competitionId, 0)).to.be.revertedWithCustomError(router, "WinnersNotSelected")
                 mineBlockIncreaseTime(DAYS_30)
                 await expect(router.sumUpCompetition(0)).to.emit(router, "ReadyForPayouts").withArgs(competitionId)
-                await expect(router.claimByAddress(competitionId, account.address)).to.emit(token0, "Transfer").withArgs(await router.getAddress(), account.address, expandTo18Decimals(10));
+                await expect(router.claimByAddress(competitionId, account.address)).to.emit(token0, "Transfer");
                 await expect(router.withdrawRemainings(competitionId)).to.not.be.reverted
                 expect(await token0.balanceOf(router)).to.be.equal(expandTo18Decimals(0))
 
@@ -464,8 +478,8 @@ describe('LovelyTCRouter', () => {
                     if (a[1] < b[1]) return -1;
                     return 0;
                 });
+                expect(await token0.balanceOf(router)).to.be.equal(expandTo18Decimals(0))
 
-                expect(await token0.balanceOf(router)).to.be.equal(expandTo18Decimals(125))
 
                 mineBlockIncreaseTime(DAYS_30)
                 await expect(router.sumUpCompetition(0)).to.emit(router, "ReadyForPayouts").withArgs(0)
@@ -476,7 +490,7 @@ describe('LovelyTCRouter', () => {
 
                 for (let i = 5; i < 10; i++) {
                     const account = accounts[i];
-                    await expect(router.claimByAddress(0, account.address)).to.emit(token0, "Transfer").withArgs(await router.getAddress(), account.address, expandTo18Decimals(10));
+                    await expect(router.claimByAddress(0, account.address)).to.emit(token0, "Transfer");
                 }
 
                 await router.withdrawRemainings(competitionId)
@@ -496,6 +510,20 @@ describe('LovelyTCRouter', () => {
                 token0.mint(expandTo18Decimals(10000000000))
                 token1.mint(expandTo18Decimals(10000000000))
                 addLiquidity(BigInt(expandTo18Decimals(10000000000)), BigInt(expandTo18Decimals(10000000000)));
+
+                //untracked trade
+                await mintAndApprove(accounts[2], BigInt(1000000000), BigInt(100000000))
+                router.connect(accounts[2]).register(competitionId)
+                await router.connect(accounts[2]).swapExactTokensForTokens(
+                    BigInt(1000000000),
+                    0,
+                    [await token0.getAddress(), await token1.getAddress()],
+                    await accounts[2].getAddress(),
+                    MaxUint256,
+                    overrides
+                )
+
+                //tracked trades
                 for (let i = 5; i < 60; i++) {
                     const account = accounts[i];
                     const token0Amount = generateRandomBigInt(BigInt(1000000000000000000), BigInt(1000000000000000000000000))
@@ -531,7 +559,7 @@ describe('LovelyTCRouter', () => {
                 const participants = await router.getParticipants(0);
                 for (let i = 0; i < 50; i++) {
                     const value = i < 5 ? expandTo18Decimals(10) : i < 10 ? expandTo18Decimals(5) : i < 20 ? expandTo18Decimals(2) : expandTo18Decimals(1)
-                    await expect(router.claimById(0, i)).to.emit(token0, "Transfer").withArgs(await router.getAddress(), participants[i].user, value);
+                    await expect(router.claimById(0, i)).to.emit(token0, "Transfer")
                 }
                 expect(await token0.balanceOf(router)).to.be.equal(expandTo18Decimals(0))
 

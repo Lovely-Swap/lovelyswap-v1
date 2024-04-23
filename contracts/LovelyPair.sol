@@ -1,14 +1,14 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import "@openzeppelin/contracts/utils/math/Math.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "./interfaces/ILovelyPair.sol";
-import "./LovelyERC20.sol";
-import "./libraries/UQ112x112.sol";
-import "./interfaces/IERC20.sol";
-import "./interfaces/ILovelyFactory.sol";
-import "./interfaces/ILovelyCallee.sol";
+import { ILovelyPair } from "./interfaces/ILovelyPair.sol";
+import { IERC20 } from "./interfaces/IERC20.sol";
+import { ILovelyFactory } from "./interfaces/ILovelyFactory.sol";
+import { ILovelyCallee } from "./interfaces/ILovelyCallee.sol";
+import { LovelyERC20 } from "./LovelyERC20.sol";
+import { UQ112x112 } from "./libraries/UQ112x112.sol";
 
 contract LovelyPair is ILovelyPair, LovelyERC20 {
 	using UQ112x112 for uint224;
@@ -17,7 +17,7 @@ contract LovelyPair is ILovelyPair, LovelyERC20 {
 	bytes4 private constant SELECTOR = bytes4(keccak256(bytes("transfer(address,uint256)")));
 
 	address public creator;
-	address public factory;
+	address public immutable factory;
 	address public token0;
 	address public token1;
 

@@ -4,11 +4,19 @@ pragma solidity =0.8.20;
 import "../interfaces/ILovelyPair.sol";
 
 library LovelyLibrary {
+	error IdenticalAddresses();
+	error ZeroAddress();
+	error InsufficientAmount();
+	error InsufficientInputAmount();
+	error InsufficientOutputAmount();
+	error InsufficientLiquidity();
+	error InvalidPath();
+
 	// returns sorted token addresses, used to handle return values from pairs sorted in this order
 	function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
-		require(tokenA != tokenB, "Lovely SwapLibrary: IDENTICAL_ADDRESSES");
+		if (tokenA == tokenB) revert IdenticalAddresses();
 		(token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-		require(token0 != address(0), "Lovely SwapLibrary: ZERO_ADDRESS");
+		if (token0 == address(0)) revert ZeroAddress();
 	}
 
 	// calculates the CREATE2 address for a pair without making any external calls
@@ -22,7 +30,7 @@ library LovelyLibrary {
 							hex"ff",
 							factory,
 							keccak256(abi.encodePacked(token0, token1)),
-							hex"36c22cfb4d7abb9c95cdd13ef020acfa5e62662ffeb8ada5f7c656dd9277754c"
+							hex"0be81157ec1dcbbc38f1748ed2739c14241d34e9b555418f5bec8eb479ed43a5"
 						)
 					)
 				)
@@ -43,8 +51,8 @@ library LovelyLibrary {
 
 	// given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
 	function quote(uint256 amountA, uint256 reserveA, uint256 reserveB) internal pure returns (uint256 amountB) {
-		require(amountA > 0, "Lovely SwapLibrary: INSUFFICIENT_AMOUNT");
-		require(reserveA > 0 && reserveB > 0, "Lovely SwapLibrary: INSUFFICIENT_LIQUIDITY");
+		if (amountA == 0) revert InsufficientAmount();
+		if (reserveA == 0 || reserveB == 0) revert InsufficientLiquidity();
 		amountB = (amountA * reserveB) / reserveA;
 	}
 
@@ -55,8 +63,8 @@ library LovelyLibrary {
 		uint256 reserveOut,
 		uint256 totalFee
 	) internal pure returns (uint256 amountOut) {
-		require(amountIn > 0, "Lovely SwapLibrary: INSUFFICIENT_INPUT_AMOUNT");
-		require(reserveIn > 0 && reserveOut > 0, "Lovely SwapLibrary: INSUFFICIENT_LIQUIDITY");
+		if (amountIn == 0) revert InsufficientInputAmount();
+		if (reserveIn == 0 || reserveOut == 0) revert InsufficientLiquidity();
 		uint256 amountInWithFee = amountIn * (10000 - totalFee);
 		uint256 numerator = amountInWithFee * reserveOut;
 		uint256 denominator = (reserveIn * 10000) + amountInWithFee;
@@ -70,8 +78,8 @@ library LovelyLibrary {
 		uint256 reserveOut,
 		uint256 totalFee
 	) internal pure returns (uint256 amountIn) {
-		require(amountOut > 0, "Lovely SwapLibrary: INSUFFICIENT_OUTPUT_AMOUNT");
-		require(reserveIn > 0 && reserveOut > 0, "Lovely SwapLibrary: INSUFFICIENT_LIQUIDITY");
+		if (amountOut == 0) revert InsufficientOutputAmount();
+		if (reserveIn == 0 || reserveOut == 0) revert InsufficientLiquidity();
 		uint256 numerator = reserveIn * amountOut * 10000;
 		uint256 denominator = (reserveOut - amountOut) * (10000 - totalFee);
 		amountIn = (numerator / denominator) + 1;
@@ -84,7 +92,7 @@ library LovelyLibrary {
 		address[] memory path,
 		uint256 totalFee
 	) internal view returns (uint[] memory amounts) {
-		require(path.length >= 2, "Lovely SwapLibrary: INVALID_PATH");
+		if (path.length < 2) revert InvalidPath();
 		amounts = new uint[](path.length);
 		amounts[0] = amountIn;
 		for (uint256 i; i < path.length - 1; i++) {
@@ -100,7 +108,7 @@ library LovelyLibrary {
 		address[] memory path,
 		uint256 totalFee
 	) internal view returns (uint[] memory amounts) {
-		require(path.length >= 2, "Lovely SwapLibrary: INVALID_PATH");
+		if (path.length < 2) revert InvalidPath();
 		amounts = new uint[](path.length);
 		amounts[amounts.length - 1] = amountOut;
 		for (uint256 i = path.length - 1; i > 0; i--) {

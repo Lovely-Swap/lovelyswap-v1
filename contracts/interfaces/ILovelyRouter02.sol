@@ -48,4 +48,13 @@ interface ILovelyRouter02 is ILovelyRouter01 {
 		address to,
 		uint256 deadline
 	) external;
+
+	error Expired();
+	error PairNotExist();
+	error InsufficientBAmount();
+	error InsufficientAAmount();
+	error InsufficientOutputAmount();
+	error ExcessiveInputAmount();
+	error InvalidPath();
+
 }

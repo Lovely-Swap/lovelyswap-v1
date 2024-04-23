@@ -5,7 +5,11 @@ import "./ILovelyRouter02.sol";
 
 interface ILovelyTCRouter is ILovelyRouter02 {
 	event CompetitionCreated(uint256 indexed id);
+	event Registered(address indexed account, uint256 indexed id);
 	event ReadyForPayouts(uint256 indexed id);
+	event TradeLogged(address indexed account, uint256 indexed competiotion, uint volume);
+	event Claimed(address indexed account, uint256 indexed competition, uint256 reward);
+	event Withdrawn(uint256 indexed competition);
 
 	struct Participant {
 		address user;
@@ -29,6 +33,8 @@ interface ILovelyTCRouter is ILovelyRouter02 {
 		Participant[] participants;
 		bool sorted;
 		address competitionToken;
+		uint256 minCompetitionTokenValue;
+		address rewardsVault;
 	}
 
 	error NoCompetition();

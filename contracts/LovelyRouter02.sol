@@ -1,19 +1,20 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import "./libraries/TransferHelper.sol";
-import "./interfaces/ILovelyFactory.sol";
-import "./interfaces/ILovelyRouter02.sol";
-import "./libraries/LovelyLibrary.sol";
-import "./interfaces/IERC20.sol";
-import "./interfaces/IWETH.sol";
+import { TransferHelper } from "./libraries/TransferHelper.sol";
+import { ILovelyFactory } from "./interfaces/ILovelyFactory.sol";
+import { ILovelyRouter02 } from "./interfaces/ILovelyRouter02.sol";
+import { LovelyLibrary } from "./libraries/LovelyLibrary.sol";
+import { IERC20 } from "./interfaces/IERC20.sol";
+import { IWETH } from "./interfaces/IWETH.sol";
+import { ILovelyPair } from "./interfaces/ILovelyPair.sol";
 
 contract LovelyRouter02 is ILovelyRouter02 {
 	address public immutable override factory;
 	address public immutable override WETH;
 
 	modifier ensure(uint256 deadline) {
-		require(deadline >= block.timestamp, "LovelyV2Router: EXPIRED");
+		if (deadline < block.timestamp) revert Expired();
 		_;
 	}
 
@@ -35,20 +36,20 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		uint256 amountAMin,
 		uint256 amountBMin
 	) internal virtual returns (uint256 amountA, uint256 amountB) {
-		// create the pair if it doesn't exist yet
-		require(ILovelyFactory(factory).getPair(tokenA, tokenB) != address(0), "LovelyV2Router: PAIR_NOT_EXIST");
+		// revert if pair does not exist. Creation of pairs from the router is forbidden
+		if (ILovelyFactory(factory).getPair(tokenA, tokenB) == address(0)) revert PairNotExist();
 		(uint256 reserveA, uint256 reserveB) = LovelyLibrary.getReserves(factory, tokenA, tokenB);
 		if (reserveA == 0 && reserveB == 0) {
 			(amountA, amountB) = (amountADesired, amountBDesired);
 		} else {
 			uint256 amountBOptimal = LovelyLibrary.quote(amountADesired, reserveA, reserveB);
 			if (amountBOptimal <= amountBDesired) {
-				require(amountBOptimal >= amountBMin, "LovelyV2Router: INSUFFICIENT_B_AMOUNT");
+				if (amountBOptimal < amountBMin) revert InsufficientBAmount();
 				(amountA, amountB) = (amountADesired, amountBOptimal);
 			} else {
 				uint256 amountAOptimal = LovelyLibrary.quote(amountBDesired, reserveB, reserveA);
 				assert(amountAOptimal <= amountADesired);
-				require(amountAOptimal >= amountAMin, "LovelyV2Router: INSUFFICIENT_A_AMOUNT");
+				if (amountAOptimal < amountAMin) revert InsufficientAAmount();
 				(amountA, amountB) = (amountAOptimal, amountBDesired);
 			}
 		}
@@ -118,8 +119,8 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		(uint256 amount0, uint256 amount1) = ILovelyPair(pair).burn(to);
 		(address token0, ) = LovelyLibrary.sortTokens(tokenA, tokenB);
 		(amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
-		require(amountA >= amountAMin, "LovelyV2Router: INSUFFICIENT_A_AMOUNT");
-		require(amountB >= amountBMin, "LovelyV2Router: INSUFFICIENT_B_AMOUNT");
+		if (amountA < amountAMin) revert InsufficientAAmount();
+		if (amountB < amountBMin) revert InsufficientBAmount();
 	}
 
 	function removeLiquidityETH(
@@ -223,7 +224,7 @@ contract LovelyRouter02 is ILovelyRouter02 {
 
 	// **** SWAP ****
 	// requires the initial amount to have already been sent to the first pair
-	function _swap(uint[] memory amounts, address[] memory path, address _to) internal virtual {
+	function _swap(uint[] memory amounts, address[] calldata path, address _to) internal virtual {
 		for (uint256 i; i < path.length - 1; i++) {
 			(address input, address output) = (path[i], path[i + 1]);
 			(address token0, ) = LovelyLibrary.sortTokens(input, output);
@@ -246,7 +247,7 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		uint256 deadline
 	) external virtual override ensure(deadline) returns (uint[] memory amounts) {
 		amounts = LovelyLibrary.getAmountsOut(factory, amountIn, path, getTotalFees());
-		require(amounts[amounts.length - 1] >= amountOutMin, "LovelyV2Router: INSUFFICIENT_OUTPUT_AMOUNT");
+		if (amounts[amounts.length - 1] < amountOutMin) revert InsufficientOutputAmount();
 		TransferHelper.safeTransferFrom(
 			path[0],
 			msg.sender,
@@ -264,7 +265,7 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		uint256 deadline
 	) external virtual override ensure(deadline) returns (uint[] memory amounts) {
 		amounts = LovelyLibrary.getAmountsIn(factory, amountOut, path, getTotalFees());
-		require(amounts[0] <= amountInMax, "LovelyV2Router: EXCESSIVE_INPUT_AMOUNT");
+		if (amounts[0] > amountInMax) revert ExcessiveInputAmount();
 		TransferHelper.safeTransferFrom(
 			path[0],
 			msg.sender,
@@ -280,9 +281,9 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		address to,
 		uint256 deadline
 	) external payable virtual override ensure(deadline) returns (uint[] memory amounts) {
-		require(path[0] == WETH, "LovelyV2Router: INVALID_PATH");
+		if (path[0] != WETH) revert InvalidPath();
 		amounts = LovelyLibrary.getAmountsOut(factory, msg.value, path, getTotalFees());
-		require(amounts[amounts.length - 1] >= amountOutMin, "LovelyV2Router: INSUFFICIENT_OUTPUT_AMOUNT");
+		if (amounts[amounts.length - 1] < amountOutMin) revert InsufficientOutputAmount();
 		IWETH(WETH).deposit{ value: amounts[0] }();
 		assert(IWETH(WETH).transfer(LovelyLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
 		_swap(amounts, path, to);
@@ -295,9 +296,9 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		address to,
 		uint256 deadline
 	) external virtual override ensure(deadline) returns (uint[] memory amounts) {
-		require(path[path.length - 1] == WETH, "LovelyV2Router: INVALID_PATH");
+		if (path[path.length - 1] != WETH) revert InvalidPath();
 		amounts = LovelyLibrary.getAmountsIn(factory, amountOut, path, getTotalFees());
-		require(amounts[0] <= amountInMax, "LovelyV2Router: EXCESSIVE_INPUT_AMOUNT");
+		if (amounts[0] > amountInMax) revert ExcessiveInputAmount();
 		TransferHelper.safeTransferFrom(
 			path[0],
 			msg.sender,
@@ -316,9 +317,9 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		address to,
 		uint256 deadline
 	) external virtual override ensure(deadline) returns (uint[] memory amounts) {
-		require(path[path.length - 1] == WETH, "LovelyV2Router: INVALID_PATH");
+		if (path[path.length - 1] != WETH) revert InvalidPath();
 		amounts = LovelyLibrary.getAmountsOut(factory, amountIn, path, getTotalFees());
-		require(amounts[amounts.length - 1] >= amountOutMin, "LovelyV2Router: INSUFFICIENT_OUTPUT_AMOUNT");
+		if (amounts[amounts.length - 1] < amountOutMin) revert InsufficientOutputAmount();
 		TransferHelper.safeTransferFrom(
 			path[0],
 			msg.sender,
@@ -336,9 +337,9 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		address to,
 		uint256 deadline
 	) external payable virtual override ensure(deadline) returns (uint[] memory amounts) {
-		require(path[0] == WETH, "LovelyV2Router: INVALID_PATH");
+		if (path[0] != WETH) revert InvalidPath();
 		amounts = LovelyLibrary.getAmountsIn(factory, amountOut, path, getTotalFees());
-		require(amounts[0] <= msg.value, "LovelyV2Router: EXCESSIVE_INPUT_AMOUNT");
+		if (amounts[0] > msg.value) revert ExcessiveInputAmount();
 		IWETH(WETH).deposit{ value: amounts[0] }();
 		assert(IWETH(WETH).transfer(LovelyLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
 		_swap(amounts, path, to);
@@ -348,7 +349,7 @@ contract LovelyRouter02 is ILovelyRouter02 {
 
 	// **** SWAP (supporting fee-on-transfer tokens) ****
 	// requires the initial amount to have already been sent to the first pair
-	function _swapSupportingFeeOnTransferTokens(address[] memory path, address _to) internal virtual {
+	function _swapSupportingFeeOnTransferTokens(address[] calldata path, address _to) internal virtual {
 		for (uint256 i; i < path.length - 1; i++) {
 			(address input, address output) = (path[i], path[i + 1]);
 			(address token0, ) = LovelyLibrary.sortTokens(input, output);
@@ -387,10 +388,8 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		);
 		uint256 balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
 		_swapSupportingFeeOnTransferTokens(path, to);
-		require(
-			IERC20(path[path.length - 1]).balanceOf(to) - balanceBefore >= amountOutMin,
-			"LovelyV2Router: INSUFFICIENT_OUTPUT_AMOUNT"
-		);
+		if (IERC20(path[path.length - 1]).balanceOf(to) - balanceBefore < amountOutMin)
+			revert InsufficientOutputAmount();
 	}
 
 	function swapExactETHForTokensSupportingFeeOnTransferTokens(
@@ -399,16 +398,14 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		address to,
 		uint256 deadline
 	) external payable virtual override ensure(deadline) {
-		require(path[0] == WETH, "LovelyV2Router: INVALID_PATH");
+		if (path[0] != WETH) revert InvalidPath();
 		uint256 amountIn = msg.value;
 		IWETH(WETH).deposit{ value: amountIn }();
 		assert(IWETH(WETH).transfer(LovelyLibrary.pairFor(factory, path[0], path[1]), amountIn));
 		uint256 balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
 		_swapSupportingFeeOnTransferTokens(path, to);
-		require(
-			IERC20(path[path.length - 1]).balanceOf(to) - balanceBefore >= amountOutMin,
-			"LovelyV2Router: INSUFFICIENT_OUTPUT_AMOUNT"
-		);
+		if (IERC20(path[path.length - 1]).balanceOf(to) - balanceBefore < amountOutMin)
+			revert InsufficientOutputAmount();
 	}
 
 	function swapExactTokensForETHSupportingFeeOnTransferTokens(
@@ -418,7 +415,7 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		address to,
 		uint256 deadline
 	) external virtual override ensure(deadline) {
-		require(path[path.length - 1] == WETH, "LovelyV2Router: INVALID_PATH");
+		if (path[path.length - 1] != WETH) revert InvalidPath();
 		TransferHelper.safeTransferFrom(
 			path[0],
 			msg.sender,
@@ -427,7 +424,7 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		);
 		_swapSupportingFeeOnTransferTokens(path, address(this));
 		uint256 amountOut = IERC20(WETH).balanceOf(address(this));
-		require(amountOut >= amountOutMin, "LovelyV2Router: INSUFFICIENT_OUTPUT_AMOUNT");
+		if (amountOut < amountOutMin) revert InsufficientOutputAmount();
 		IWETH(WETH).withdraw(amountOut);
 		TransferHelper.safeTransferETH(to, amountOut);
 	}
@@ -459,14 +456,14 @@ contract LovelyRouter02 is ILovelyRouter02 {
 
 	function getAmountsOut(
 		uint256 amountIn,
-		address[] memory path
+		address[] calldata path
 	) public view virtual override returns (uint[] memory amounts) {
 		return LovelyLibrary.getAmountsOut(factory, amountIn, path, getTotalFees());
 	}
 
 	function getAmountsIn(
 		uint256 amountOut,
-		address[] memory path
+		address[] calldata path
 	) public view virtual override returns (uint[] memory amounts) {
 		return LovelyLibrary.getAmountsIn(factory, amountOut, path, getTotalFees());
 	}

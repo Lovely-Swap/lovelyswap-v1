@@ -33,41 +33,24 @@ describe('LovelyRouter02', () => {
     it('quote', async () => {
         expect(await router.quote(BigInt(1), BigInt(100), BigInt(200))).to.eq(BigInt(2))
         expect(await router.quote(BigInt(2), BigInt(200), BigInt(100))).to.eq(BigInt(1))
-        await expect(router.quote(BigInt(0), BigInt(100), BigInt(200))).to.be.revertedWith(
-            'Lovely SwapLibrary: INSUFFICIENT_AMOUNT'
-        )
-        await expect(router.quote(BigInt(1), BigInt(0), BigInt(200))).to.be.revertedWith(
-            'Lovely SwapLibrary: INSUFFICIENT_LIQUIDITY'
-        )
-        await expect(router.quote(BigInt(1), BigInt(100), BigInt(0))).to.be.revertedWith(
-            'Lovely SwapLibrary: INSUFFICIENT_LIQUIDITY'
-        )
+        await expect(router.quote(BigInt(0), BigInt(100), BigInt(200))).to.be.revertedWithCustomError(router, "InsufficientAmount")
+        await expect(router.quote(BigInt(1), BigInt(0), BigInt(200))).to.be.revertedWithCustomError(router, "InsufficientLiquidity")
+        await expect(router.quote(BigInt(1), BigInt(100), BigInt(0))).to.be.revertedWithCustomError(router, "InsufficientLiquidity")
+        
     })
 
     it('getAmountOut', async () => {
         expect(await router.getAmountOut(BigInt(2), BigInt(100), BigInt(100))).to.eq(BigInt(1))
-        await expect(router.getAmountOut(BigInt(0), BigInt(100), BigInt(100))).to.be.revertedWith(
-            'Lovely SwapLibrary: INSUFFICIENT_INPUT_AMOUNT'
-        )
-        await expect(router.getAmountOut(BigInt(2), BigInt(0), BigInt(100))).to.be.revertedWith(
-            'Lovely SwapLibrary: INSUFFICIENT_LIQUIDITY'
-        )
-        await expect(router.getAmountOut(BigInt(2), BigInt(100), BigInt(0))).to.be.revertedWith(
-            'Lovely SwapLibrary: INSUFFICIENT_LIQUIDITY'
-        )
+        await expect(router.getAmountOut(BigInt(0), BigInt(100), BigInt(100))).to.be.revertedWithCustomError(router, "InsufficientInputAmount")
+        await expect(router.getAmountOut(BigInt(2), BigInt(0), BigInt(100))).to.be.revertedWithCustomError(router, "InsufficientLiquidity")
+        await expect(router.getAmountOut(BigInt(2), BigInt(100), BigInt(0))).to.be.revertedWithCustomError(router, "InsufficientLiquidity")
     })
 
     it('getAmountIn', async () => {
         expect(await router.getAmountIn(BigInt(1), BigInt(100), BigInt(100))).to.eq(BigInt(2))
-        await expect(router.getAmountIn(BigInt(0), BigInt(100), BigInt(100))).to.be.revertedWith(
-            'Lovely SwapLibrary: INSUFFICIENT_OUTPUT_AMOUNT'
-        )
-        await expect(router.getAmountIn(BigInt(1), BigInt(0), BigInt(100))).to.be.revertedWith(
-            'Lovely SwapLibrary: INSUFFICIENT_LIQUIDITY'
-        )
-        await expect(router.getAmountIn(BigInt(1), BigInt(100), BigInt(0))).to.be.revertedWith(
-            'Lovely SwapLibrary: INSUFFICIENT_LIQUIDITY'
-        )
+        await expect(router.getAmountIn(BigInt(0), BigInt(100), BigInt(100))).to.be.revertedWithCustomError(router, "InsufficientOutputAmount")
+        await expect(router.getAmountIn(BigInt(1), BigInt(0), BigInt(100))).to.be.revertedWithCustomError(router, "InsufficientLiquidity")
+        await expect(router.getAmountIn(BigInt(1), BigInt(100), BigInt(0))).to.be.revertedWithCustomError(router, "InsufficientLiquidity")
     })
 
     it('getAmountsOut', async () => {
@@ -84,9 +67,7 @@ describe('LovelyRouter02', () => {
             MaxUint256
         )
 
-        await expect(router.getAmountsOut(BigInt(2), [await token0.getAddress()])).to.be.revertedWith(
-            'Lovely SwapLibrary: INVALID_PATH'
-        )
+        await expect(router.getAmountsOut(BigInt(2), [await token0.getAddress()])).to.be.revertedWithCustomError(router, "InvalidPath")
         const path = [await token0.getAddress(), await token1.getAddress()]
         expect(await router.getAmountsOut(BigInt(2), path)).to.deep.eq([BigInt(2), BigInt(1)])
     })
@@ -105,9 +86,7 @@ describe('LovelyRouter02', () => {
             MaxUint256
         )
 
-        await expect(router.getAmountsIn(BigInt(1), [await token0.getAddress()])).to.be.revertedWith(
-            'Lovely SwapLibrary: INVALID_PATH'
-        )
+        await expect(router.getAmountsIn(BigInt(1), [await token0.getAddress()])).to.be.revertedWithCustomError(router, "InvalidPath")
         const path = [await token0.getAddress(), await token1.getAddress()]
         expect(await router.getAmountsIn(BigInt(1), path)).to.deep.eq([BigInt(2), BigInt(1)])
     })
@@ -371,7 +350,7 @@ describe('fee-on-transfer tokens', () => {
             {
                 value: swapAmount
             }
-        )).to.be.revertedWith("LovelyV2Router: INVALID_PATH");
+        )).to.be.revertedWithCustomError(router, "InvalidPath")
 
         await expect(router.swapExactETHForTokensSupportingFeeOnTransferTokens(
             0,
@@ -381,7 +360,7 @@ describe('fee-on-transfer tokens', () => {
             {
                 value: swapAmount
             }
-        )).to.be.revertedWith("LovelyV2Router: EXPIRED");
+        )).to.be.revertedWithCustomError(router, "Expired")
 
         await router.connect(wallet).swapExactETHForTokensSupportingFeeOnTransferTokens(
             0,
@@ -410,7 +389,7 @@ describe('fee-on-transfer tokens', () => {
             wallet.address,
             MaxUint256,
             overrides
-        )).to.be.revertedWith("LovelyV2Router: INVALID_PATH");
+        )).to.be.revertedWithCustomError(router, "InvalidPath")
 
         await expect(router.swapExactTokensForETHSupportingFeeOnTransferTokens(
             swapAmount,
@@ -419,7 +398,7 @@ describe('fee-on-transfer tokens', () => {
             wallet.address,
             0,
             overrides
-        )).to.be.revertedWith("LovelyV2Router: EXPIRED");
+        )).to.be.revertedWithCustomError(router, "Expired")
 
         await router.swapExactTokensForETHSupportingFeeOnTransferTokens(
             swapAmount,
