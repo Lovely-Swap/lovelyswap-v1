@@ -54,11 +54,11 @@ export async function pairFixture(wallet: SignerWithAddress): Promise<V2Fixture>
   factory.allowToken(WETHPartner, 0);
 
   const timestamp = (await ethers.provider.getBlock('latest'))!.timestamp
-  await factory.createPair(await tokenA.getAddress(), await tokenB.getAddress(), timestamp)
+  await factory.createPair(await tokenA.getAddress(), await tokenB.getAddress(), 0)
   const pairAddress = await factory.getPair(await tokenA.getAddress(), await tokenB.getAddress())
   const pair = LovelyPair__factory.connect(pairAddress, wallet);
 
-  await factory.createPair(await tokenB.getAddress(), await tokenC.getAddress(), timestamp)
+  await factory.createPair(await tokenB.getAddress(), await tokenC.getAddress(), 0)
   const pairAddress2 = await factory.getPair(await tokenB.getAddress(), await tokenC.getAddress())
   const pair2 = LovelyPair__factory.connect(pairAddress2, wallet);
 
@@ -73,7 +73,7 @@ export async function pairFixture(wallet: SignerWithAddress): Promise<V2Fixture>
 
   const routerEventEmitter = await new RouterEventEmitter__factory(wallet).deploy();
 
-  await factory.createPair(await WETH.getAddress(), await WETHPartner.getAddress(), timestamp);
+  await factory.createPair(await WETH.getAddress(), await WETHPartner.getAddress(), 0);
   const WETHPairAddress = await factory.getPair(await WETH.getAddress(), await WETHPartner.getAddress())
   const WETHPair = LovelyPair__factory.connect(WETHPairAddress, wallet);
 

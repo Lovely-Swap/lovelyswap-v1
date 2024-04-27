@@ -36,6 +36,8 @@ contract LovelyFactory is ILovelyFactory {
 	) {
 		require(allowlists[tokenA].creator != address(0), "Lovely Swap: TOKEN_A_NOT_WHITELISTED");
 		require(allowlists[tokenB].creator != address(0), "Lovely Swap: TOKEN_B_NOT_WHITELISTED");
+		require(activeFrom <= allowlists[tokenA].activeFrom || activeFrom <= allowlists[tokenB].activeFrom ,
+			"Lovely Swap: INVALID_ACTIVE_FROM");
 		if (activeFrom < allowlists[tokenA].activeFrom) {
 			require(msg.sender == allowlists[tokenA].creator, "Lovely Swap: FORBIDDEN");
 		}
@@ -44,7 +46,7 @@ contract LovelyFactory is ILovelyFactory {
 		}
 		if (allowlists[tokenA].activeFrom > block.timestamp) {
 			require(msg.sender == allowlists[tokenA].creator, "Lovely Swap: FORBIDDEN");
-			require(activeFrom <= allowlists[tokenA].activeFrom, "LOVELY: INVALID_ACTIVE_FROM");
+			require(activeFrom <= allowlists[tokenA].activeFrom, "Lovely Swap: INVALID_ACTIVE_FROM");
 		}
 		if (allowlists[tokenB].activeFrom > block.timestamp) {
 			require(msg.sender == allowlists[tokenB].creator, "Lovely Swap: FORBIDDEN");

@@ -43,22 +43,22 @@ describe('LovelyFactory', () => {
 
         const bytecode = `${LovelyPair__factory.bytecode}`
         const create2Address = getCreate2Address(await factory.getAddress(), tokens, bytecode)
-        await expect(factory.createPair(...tokens, timestamp)).to.be.rejectedWith("Lovely Swap: TOKEN_A_NOT_WHITELISTED")
+        await expect(factory.createPair(...tokens, 0)).to.be.rejectedWith("Lovely Swap: TOKEN_A_NOT_WHITELISTED")
 
         await factory.allowToken(tokens[0], 0)
-        await expect(factory.createPair(...tokens, timestamp)).to.be.rejectedWith("Lovely Swap: TOKEN_B_NOT_WHITELISTED")
+        await expect(factory.createPair(...tokens, 0)).to.be.rejectedWith("Lovely Swap: TOKEN_B_NOT_WHITELISTED")
         await factory.allowToken(tokens[1], 0)
         await factory.allowToken(ZERO_ADDRESS, 0)
 
-        await expect(factory.createPair(...tokens, timestamp))
+        await expect(factory.createPair(...tokens, 0))
             .to.emit(factory, 'PairCreated')
             .withArgs(TEST_ADDRESSES[0], TEST_ADDRESSES[1], create2Address, BigInt(1))
 
-        await expect(factory.createPair(tokens[0], tokens[0], timestamp)).to.be.revertedWith("Lovely Swap: IDENTICAL_ADDRESSES")
-        await expect(factory.createPair(ZERO_ADDRESS, tokens[0], timestamp)).to.be.revertedWith("Lovely Swap: ZERO_ADDRESS")
+        await expect(factory.createPair(tokens[0], tokens[0], 0)).to.be.revertedWith("Lovely Swap: IDENTICAL_ADDRESSES")
+        await expect(factory.createPair(ZERO_ADDRESS, tokens[0], 0)).to.be.revertedWith("Lovely Swap: ZERO_ADDRESS")
 
-        await expect(factory.createPair(...tokens, timestamp)).to.be.rejectedWith("Lovely Swap: PAIR_EXISTS");
-        await expect(factory.createPair(tokens[1], tokens[0], timestamp)).to.be.rejectedWith("Lovely Swap: PAIR_EXISTS");
+        await expect(factory.createPair(...tokens, 0)).to.be.rejectedWith("Lovely Swap: PAIR_EXISTS");
+        await expect(factory.createPair(tokens[1], tokens[0], 0)).to.be.rejectedWith("Lovely Swap: PAIR_EXISTS");
         expect(await factory.getPair(...tokens)).to.eq(create2Address)
         expect(await factory.getPair(tokens[1], tokens[0])).to.eq(create2Address)
         expect(await factory.allPairs(0)).to.eq(create2Address)
@@ -127,7 +127,7 @@ describe('LovelyFactory', () => {
 
         await expect(factory.connect(other).createPair(tokens[1], tokens[2], 0)).to.be.revertedWith("Lovely Swap: FORBIDDEN")
 
-        await expect(factory.createPair(tokens[1], tokens[2], timestamp + days7 + 10)).to.be.revertedWith("LOVELY: INVALID_ACTIVE_FROM")
+        await expect(factory.createPair(tokens[1], tokens[2], timestamp + days7 + 10)).to.be.revertedWith("Lovely Swap: INVALID_ACTIVE_FROM")
 
         await expect(factory.createPair(tokens[1], tokens[2], timestamp + days7)).to.emit(factory, 'PairCreated')
 
