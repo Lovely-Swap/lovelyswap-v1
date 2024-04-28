@@ -5,6 +5,12 @@ interface ILovelyFactory {
 	event PairCreated(address indexed token0, address indexed token1, address pair, uint256);
 	event TokenAllowed(address indexed token, uint256 indexed activeFrom);
 
+	event FeeToAddressChanged(address indexed account);
+	event FeesChanged(uint256 indexed ownerFee, uint256 indexed lpFee);
+	event FeeTokenChanged(address indexed tokenAddress);
+	event ListingFeeChanged(uint256 indexed price);
+	event AdminAccountChanged(address indexed newAdmin);
+
 	struct AllowedToken {
 		address creator;
 		uint256 activeFrom;

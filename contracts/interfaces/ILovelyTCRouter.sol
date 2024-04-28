@@ -10,6 +10,7 @@ interface ILovelyTCRouter is ILovelyRouter02 {
 	event TradeLogged(address indexed account, uint256 indexed competiotion, uint volume);
 	event Claimed(address indexed account, uint256 indexed competition, uint256 reward);
 	event Withdrawn(uint256 indexed competition);
+	event CompetitionFeeSet(uint256 indexed fee);
 
 	struct Participant {
 		address user;
@@ -53,4 +54,5 @@ interface ILovelyTCRouter is ILovelyRouter02 {
 	error InvalidRange();
 	error RangeTooBig();
 	error NotACompetitionToken();
+	error PairDoesNotExist();
 }

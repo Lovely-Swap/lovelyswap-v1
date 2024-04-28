@@ -36,8 +36,10 @@ contract LovelyFactory is ILovelyFactory {
 	) {
 		require(allowlists[tokenA].creator != address(0), "Lovely Swap: TOKEN_A_NOT_WHITELISTED");
 		require(allowlists[tokenB].creator != address(0), "Lovely Swap: TOKEN_B_NOT_WHITELISTED");
-		require(activeFrom <= allowlists[tokenA].activeFrom || activeFrom <= allowlists[tokenB].activeFrom ,
-			"Lovely Swap: INVALID_ACTIVE_FROM");
+		require(
+			activeFrom <= allowlists[tokenA].activeFrom || activeFrom <= allowlists[tokenB].activeFrom,
+			"Lovely Swap: INVALID_ACTIVE_FROM"
+		);
 		if (activeFrom < allowlists[tokenA].activeFrom) {
 			require(msg.sender == allowlists[tokenA].creator, "Lovely Swap: FORBIDDEN");
 		}
@@ -79,14 +81,15 @@ contract LovelyFactory is ILovelyFactory {
 	 * @param activeFrom The timestamp from which the token becomes active.
 	 */
 	function allowToken(address token, uint256 activeFrom) external {
+		require(token != address(0), "Lovely Swap: ZERO_ADDRESS");
 		require(allowlists[token].creator == address(0), "Lovely Swap: ALREADY_WHITELISTED");
 		require(block.timestamp + MAX_ACTIVE_FROM >= activeFrom, "Lovely Swap: LONG_PENDING_PERIOD");
-		if (msg.sender != feeToSetter) {
-			TransferHelper.safeTransferFrom(feeToken, msg.sender, feeTo, listingFee); //Owner don't pay fees
-		}
 		allowlists[token].activeFrom = activeFrom;
 		allowlists[token].creator = msg.sender;
 		allowedTokens.push(token);
+		if (msg.sender != feeToSetter) {
+			TransferHelper.safeTransferFrom(feeToken, msg.sender, feeTo, listingFee); //Owner don't pay fees
+		}
 		emit TokenAllowed(token, activeFrom);
 	}
 
@@ -140,7 +143,6 @@ contract LovelyFactory is ILovelyFactory {
 	) external valid(tokenA, tokenB, activeFrom) returns (address pair) {
 		require(tokenA != tokenB, "Lovely Swap: IDENTICAL_ADDRESSES");
 		(address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-		require(token0 != address(0), "Lovely Swap: ZERO_ADDRESS");
 		require(getPair[token0][token1] == address(0), "Lovely Swap: PAIR_EXISTS"); // single check is sufficient
 		bytes32 salt = keccak256(abi.encodePacked(token0, token1));
 		pair = address(new LovelyPair{ salt: salt }());
@@ -159,6 +161,7 @@ contract LovelyFactory is ILovelyFactory {
 	function setFeeTo(address _feeTo) external {
 		require(msg.sender == feeToSetter, "Lovely Swap: FORBIDDEN");
 		feeTo = _feeTo;
+		emit FeeToAddressChanged(_feeTo);
 	}
 
 	/**
@@ -171,9 +174,9 @@ contract LovelyFactory is ILovelyFactory {
 		require(msg.sender == feeToSetter, "Lovely Swap: FORBIDDEN");
 		require(_ownerFee <= 20, "Lovely Swap: VALIDATION"); // 0.2% max
 		require(_lpFee <= 20, "Lovely Swap: VALIDATION"); // 0.2% max
-
 		ownerFee = _ownerFee;
 		lpFee = _lpFee;
+		emit FeesChanged(ownerFee, lpFee);
 	}
 
 	/**
@@ -185,6 +188,7 @@ contract LovelyFactory is ILovelyFactory {
 		require(msg.sender == feeToSetter, "Lovely Swap: FORBIDDEN");
 		require(_feeToken != address(0), "Lovely Swap: VALIDATION");
 		feeToken = _feeToken;
+		emit FeeTokenChanged(feeToken);
 	}
 
 	/**
@@ -195,6 +199,7 @@ contract LovelyFactory is ILovelyFactory {
 	function setListingFee(uint256 _listingFee) external {
 		require(msg.sender == feeToSetter, "Lovely Swap: FORBIDDEN");
 		listingFee = _listingFee;
+		emit ListingFeeChanged(listingFee);
 	}
 
 	/**
@@ -206,5 +211,6 @@ contract LovelyFactory is ILovelyFactory {
 		require(msg.sender == feeToSetter, "Lovely Swap: FORBIDDEN");
 		require(_feeToSetter != address(0), "Lovely Swap: VALIDATION");
 		feeToSetter = _feeToSetter;
+		emit AdminAccountChanged(feeToSetter);
 	}
 }

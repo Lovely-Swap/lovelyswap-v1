@@ -10,6 +10,7 @@ import { IERC20 } from "./interfaces/IERC20.sol";
 import { LovelyRouter02 } from "./LovelyRouter02.sol";
 import { IRewardsVault } from "./interfaces/IRewardsVault.sol";
 import { IRewardsVaultDeployer } from "./interfaces/IRewardsVaultDeployer.sol";
+import { ILovelyFactory } from "./interfaces/ILovelyFactory.sol";
 
 contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 	uint256 public immutable maxParticipants;
@@ -27,6 +28,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 	/**
 	 * @param _factory address of the factory
 	 * @param _WETH address of the WETH token
+	 * @param _vaultDeployerAddress address of the vault factory
 	 * @param _competitionFee fee that will be charged for creating a competition
 	 * @param _maxParticipants maximum number of participants in a competition
 	 */
@@ -96,6 +98,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 
 	function setCompetitionFee(uint256 _competitionFee) external onlyOwner {
 		competitionFee = _competitionFee;
+		emit CompetitionFeeSet(competitionFee);
 	}
 
 	/**
@@ -133,6 +136,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		for (uint256 i = 0; i < pairs.length; i++) {
 			address token0 = ILovelyPair(pairs[i]).token0();
 			address token1 = ILovelyPair(pairs[i]).token1();
+			if (ILovelyFactory(factory).getPair(token0, token1) != pairs[i]) revert PairDoesNotExist();
 			if (token0 != competitionToken && token1 != competitionToken) revert NotACompetitionToken();
 		}
 		uint256 totalRewards;
@@ -141,8 +145,6 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 			totalRewards += rewards[i] * WINNERS[i];
 		}
 		address vaultAddress = IRewardsVaultDeployer(vaultDeployerAddress).deploy(rewardToken);
-		_transferRewardsIn(rewardToken, vaultAddress, totalRewards);
-
 		Competition storage competition = competitions.push();
 		competition.start = start;
 		competition.end = end;
@@ -156,6 +158,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		for (uint256 i = 0; i < pairs.length; i++) {
 			pairToCompetitions[pairs[i]].push(competitions.length - 1);
 		}
+		_transferRewardsIn(rewardToken, vaultAddress, totalRewards);
 		emit CompetitionCreated(competitions.length - 1);
 	}
 
@@ -183,12 +186,19 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		if (competition >= competitions.length) revert NoCompetition();
 		if (competitions[competition].sorted) revert AlreadySorted();
 		if (block.timestamp <= competitions[competition].end) revert NotEnded();
-		competitions[competition].participants = _mergeSort(
-			competitions[competition].participants,
-			0,
-			competitions[competition].participants.length - 1
-		);
+		if (competitions[competition].participants.length > 0) {
+			competitions[competition].participants = _mergeSort(
+				competitions[competition].participants,
+				0,
+				competitions[competition].participants.length - 1
+			);
+		}
 		competitions[competition].sorted = true;
+		emit ReadyForPayouts(competition);
+	}
+
+	function cleanUpCompetitions(uint256 competition) external {
+		if (!competitions[competition].sorted) revert NotEnded();
 		for (uint256 i = 0; i < competitions[competition].pairs.length; i++) {
 			address pair = competitions[competition].pairs[i];
 			for (uint256 j = 0; j < pairToCompetitions[pair].length; j++) {
@@ -199,7 +209,6 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 				}
 			}
 		}
-		emit ReadyForPayouts(competition);
 	}
 
 	/*
@@ -207,7 +216,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 	 * @dev This function requires that the competition exists, is sorted, and the participant is a winner.
 	 * It allows the winner to claim their reward and logs the claim.
 	 * @param competition The competition ID.
-	 * @param participantId The participant ID.
+	 * @param participantAddress An address of the participant
 	 */
 	function claimByAddress(uint256 competition, address participantAddress) external {
 		if (competition >= competitions.length) revert NoCompetition();
@@ -316,7 +325,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 				Competition storage competition = competitions[competitionId];
 				uint256 value = input == competition.competitionToken ? valueIn : valueOut;
 				if (value >= competition.minCompetitionTokenValue) {
-					// only if value is over lover limit.
+					// only if value is over lower limit.
 					uint256 participantId = _getParticipantId(competition);
 					competition.participants[participantId].tradeVolume += value;
 					competition.totalTradeVolume += value;

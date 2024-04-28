@@ -12,7 +12,7 @@ import {
 import { ecsign } from 'ethereumjs-util';
 
 import { expandTo18Decimals, mineBlockIncreaseTime, generateRandomBigInt } from './shared/utilities'
-import { pairFixture } from './shared/fixtures'
+import { factoryFixture, pairFixture } from './shared/fixtures'
 
 import { ethers } from "hardhat"
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
@@ -106,7 +106,23 @@ describe('LovelyTCRouter', () => {
                     .to.emit(router, "CompetitionCreated").withArgs(1);
                 expect(await router.competitionsLength()).to.be.equal(2);
                 expect(await router.maxParticipants()).to.be.equal(500);
+
+
             })
+
+            it('pair validation', async () =>{
+                const timestamp = (await ethers.provider.getBlock('latest'))!.timestamp
+                const newFactory = await factoryFixture(accounts[0]);
+                await newFactory.factory.allowToken(token0, 0);
+                await newFactory.factory.allowToken(token1, 0);
+                await newFactory.factory.createPair(token0, token1, 0);
+                const newPairAddress = await newFactory.factory.getPair(token0, token1);
+                const rewards = [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2), expandTo18Decimals(1)]
+                expect(newPairAddress).to.not.eql(await router.factory());
+                await expect(router.createCompetition(timestamp + 200, timestamp + 200 + DAYS_30, token0, await pair.token0(), expandTo18Decimals(1), rewards, [newPairAddress]))
+                    .to.be.revertedWithCustomError(router, "PairDoesNotExist")
+            })
+
         })
 
         describe('swapExactTokensForTokens no competition', () => {
@@ -303,6 +319,26 @@ describe('LovelyTCRouter', () => {
 
             })
 
+            it('Clean up', async () => {
+                router = await new LovelyTCRouter__factory(wallet).deploy(factory, WETH, rewardsVaultFactory, TC_CREATE_FEE, 2);
+                await token0.connect(accounts[0]).approve(await router.getAddress(), MaxUint256)
+                await token0.connect(accounts[0]).mint(expandTo18Decimals(200))
+                const pairs = [await pair.getAddress()]
+                const rewards = [expandTo18Decimals(10), expandTo18Decimals(5), expandTo18Decimals(2), expandTo18Decimals(1)]
+                await expect(router.createCompetition(timestamp + 200, timestamp + DAYS_30, token0, await pair.token0(), BigInt("100000"), rewards, pairs))
+                    .to.emit(router, "CompetitionCreated").withArgs(0)
+                await expect(router.createCompetition(timestamp + 200, timestamp + DAYS_30, token0, await pair.token0(), BigInt("100000"), rewards, pairs))
+                    .to.emit(router, "CompetitionCreated").withArgs(1)
+                await expect(router.cleanUpCompetitions(0)).to.be.revertedWithCustomError(router, "NotEnded");
+                expect((await router.getCompetitionsOfPair(await pair.getAddress())).length).to.eql(2);
+                mineBlockIncreaseTime(DAYS_30+200)
+                expect((await router.getCompetitionsOfPair(await pair.getAddress())).length).to.eql(2);
+                await router.sumUpCompetition(0);
+                await router.cleanUpCompetitions(0);
+                expect((await router.getCompetitionsOfPair(await pair.getAddress())).length).to.eql(1);
+                await expect(router.withdrawRemainings(0)).to.not.be.reverted
+            })
+
             it('trades over max participants ', async () => {
                 router = await new LovelyTCRouter__factory(wallet).deploy(factory, WETH, rewardsVaultFactory, TC_CREATE_FEE, 2);
                 await token0.connect(accounts[0]).approve(await router.getAddress(), MaxUint256)
@@ -483,6 +519,7 @@ describe('LovelyTCRouter', () => {
 
                 mineBlockIncreaseTime(DAYS_30)
                 await expect(router.sumUpCompetition(0)).to.emit(router, "ReadyForPayouts").withArgs(0)
+                await router.cleanUpCompetitions(0);
                 const onchainSortedArray = await router.getParticipants(competitionId)
                 for (let i = 0; i < onchainSortedArray.length; i++) {
                     await expect(onchainSortedArray[i][1]).to.be.equal(offchainSortedArray[i][1])

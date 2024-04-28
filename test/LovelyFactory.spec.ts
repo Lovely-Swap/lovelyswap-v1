@@ -48,14 +48,13 @@ describe('LovelyFactory', () => {
         await factory.allowToken(tokens[0], 0)
         await expect(factory.createPair(...tokens, 0)).to.be.rejectedWith("Lovely Swap: TOKEN_B_NOT_WHITELISTED")
         await factory.allowToken(tokens[1], 0)
-        await factory.allowToken(ZERO_ADDRESS, 0)
+        await expect(factory.allowToken(ZERO_ADDRESS, 0)).to.be.revertedWith("Lovely Swap: ZERO_ADDRESS")
 
         await expect(factory.createPair(...tokens, 0))
             .to.emit(factory, 'PairCreated')
             .withArgs(TEST_ADDRESSES[0], TEST_ADDRESSES[1], create2Address, BigInt(1))
 
         await expect(factory.createPair(tokens[0], tokens[0], 0)).to.be.revertedWith("Lovely Swap: IDENTICAL_ADDRESSES")
-        await expect(factory.createPair(ZERO_ADDRESS, tokens[0], 0)).to.be.revertedWith("Lovely Swap: ZERO_ADDRESS")
 
         await expect(factory.createPair(...tokens, 0)).to.be.rejectedWith("Lovely Swap: PAIR_EXISTS");
         await expect(factory.createPair(tokens[1], tokens[0], 0)).to.be.rejectedWith("Lovely Swap: PAIR_EXISTS");
@@ -109,6 +108,8 @@ describe('LovelyFactory', () => {
             '0x1100000000000000000000000000000000000000',
             '0x1200000000000000000000000000000000000000',
             '0x1300000000000000000000000000000000000000',
+            '0x1400000000000000000000000000000000000000',
+            '0x1500000000000000000000000000000000000000',
         ]
 
         const timestamp = (await ethers.provider.getBlock('latest'))!.timestamp
@@ -135,6 +136,11 @@ describe('LovelyFactory', () => {
         await expect(factory.connect(other).allowToken(tokens[4], timestamp + days7 / 2)).to.emit(factory, 'TokenAllowed')
         await expect(factory.connect(other).createPair(tokens[3], tokens[4], timestamp + days7 / 2 + 10)).to.be.revertedWith("Lovely Swap: INVALID_ACTIVE_FROM")
 
+        await expect(factory.connect(other).allowToken(tokens[11], timestamp + days7 / 2)).to.emit(factory, 'TokenAllowed')
+        await expect(factory.connect(other).allowToken(tokens[12], timestamp + days7)).to.emit(factory, 'TokenAllowed')
+        await expect(factory.connect(other).createPair(tokens[11], tokens[12], timestamp + days7 / 2 + 10)).to.be.revertedWith("Lovely Swap: INVALID_ACTIVE_FROM")
+
+
         await expect(factory.connect(other).allowToken(tokens[5], timestamp + days7)).to.emit(factory, 'TokenAllowed')
         await expect(factory.allowToken(tokens[6], timestamp + days7 / 2)).to.emit(factory, 'TokenAllowed')
         await expect(factory.connect(other).createPair(tokens[5], tokens[6], timestamp + days7 / 2 + 10)).to.be.revertedWith("Lovely Swap: FORBIDDEN")
@@ -145,10 +151,10 @@ describe('LovelyFactory', () => {
 
 
         await expect(factory.allowToken(tokens[9], 0)).to.emit(factory, 'TokenAllowed')
-        await expect(factory.connect(other).allowToken(tokens[10], timestamp + days7 )).to.emit(factory, 'TokenAllowed')
+        await expect(factory.connect(other).allowToken(tokens[10], timestamp + days7)).to.emit(factory, 'TokenAllowed')
         await expect(factory.createPair(tokens[9], tokens[10], timestamp + days7 - 10)).to.be.revertedWith("Lovely Swap: FORBIDDEN")
-
-
+        
+    
     })
 
 
