@@ -53,6 +53,6 @@ interface ILovelyTCRouter is ILovelyRouter02 {
 	error InvalidFee();
 	error InvalidRange();
 	error RangeTooBig();
-	error NotACompetitionToken();
+	error NotACompetitionToken(address token0, address token1);
 	error PairDoesNotExist();
 }

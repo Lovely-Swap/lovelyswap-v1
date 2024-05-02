@@ -35,4 +35,15 @@ interface ILovelyFactory {
 	function setFeeTo(address) external;
 
 	function setFeeToSetter(address) external;
+
+	error TokenANotWhitelisted();
+	error TokenBNotWhitelisted();
+	error InvalidActiveFrom();
+	error Forbidden();
+	error ValidationFailed();
+	error ZeroAddress();
+	error AlreadyWhitelisted();
+	error InvalidPendingPeriod();
+	error IdenticalAddresses();
+	error PairExists();
 }

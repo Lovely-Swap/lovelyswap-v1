@@ -30,7 +30,7 @@ library LovelyLibrary {
 							hex"ff",
 							factory,
 							keccak256(abi.encodePacked(token0, token1)),
-							hex"e2b53e87c30dcd2ef2e46900f0e7abd15d5ba6dab5f0a7898d051d400d2ed223"
+							hex"ad3026623d8747f3e606ae74d552678f8adf779f181a2e08c56468f553114e2b"
 						)
 					)
 				)

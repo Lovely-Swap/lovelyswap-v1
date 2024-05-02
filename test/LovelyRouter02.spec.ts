@@ -36,7 +36,7 @@ describe('LovelyRouter02', () => {
         await expect(router.quote(BigInt(0), BigInt(100), BigInt(200))).to.be.revertedWithCustomError(router, "InsufficientAmount")
         await expect(router.quote(BigInt(1), BigInt(0), BigInt(200))).to.be.revertedWithCustomError(router, "InsufficientLiquidity")
         await expect(router.quote(BigInt(1), BigInt(100), BigInt(0))).to.be.revertedWithCustomError(router, "InsufficientLiquidity")
-        
+
     })
 
     it('getAmountOut', async () => {

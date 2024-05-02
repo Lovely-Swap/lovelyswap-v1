@@ -43,21 +43,21 @@ describe('LovelyFactory', () => {
 
         const bytecode = `${LovelyPair__factory.bytecode}`
         const create2Address = getCreate2Address(await factory.getAddress(), tokens, bytecode)
-        await expect(factory.createPair(...tokens, 0)).to.be.rejectedWith("Lovely Swap: TOKEN_A_NOT_WHITELISTED")
+        await expect(factory.createPair(...tokens, 0)).to.be.revertedWithCustomError(factory, "TokenANotWhitelisted")
 
         await factory.allowToken(tokens[0], 0)
-        await expect(factory.createPair(...tokens, 0)).to.be.rejectedWith("Lovely Swap: TOKEN_B_NOT_WHITELISTED")
+        await expect(factory.createPair(...tokens, 0)).to.be.revertedWithCustomError(factory, "TokenBNotWhitelisted")
         await factory.allowToken(tokens[1], 0)
-        await expect(factory.allowToken(ZERO_ADDRESS, 0)).to.be.revertedWith("Lovely Swap: ZERO_ADDRESS")
+        await expect(factory.allowToken(ZERO_ADDRESS, 0)).to.be.revertedWithCustomError(factory, "ZeroAddress")
 
         await expect(factory.createPair(...tokens, 0))
             .to.emit(factory, 'PairCreated')
             .withArgs(TEST_ADDRESSES[0], TEST_ADDRESSES[1], create2Address, BigInt(1))
 
-        await expect(factory.createPair(tokens[0], tokens[0], 0)).to.be.revertedWith("Lovely Swap: IDENTICAL_ADDRESSES")
+        await expect(factory.createPair(tokens[0], tokens[0], 0)).to.be.revertedWithCustomError(factory, "IdenticalAddresses")
 
-        await expect(factory.createPair(...tokens, 0)).to.be.rejectedWith("Lovely Swap: PAIR_EXISTS");
-        await expect(factory.createPair(tokens[1], tokens[0], 0)).to.be.rejectedWith("Lovely Swap: PAIR_EXISTS");
+        await expect(factory.createPair(...tokens, 0)).to.be.revertedWithCustomError(factory, "PairExists")
+        await expect(factory.createPair(tokens[1], tokens[0], 0)).to.be.revertedWithCustomError(factory, "PairExists")
         expect(await factory.getPair(...tokens)).to.eq(create2Address)
         expect(await factory.getPair(tokens[1], tokens[0])).to.eq(create2Address)
         expect(await factory.allPairs(0)).to.eq(create2Address)
@@ -78,10 +78,10 @@ describe('LovelyFactory', () => {
     })
 
     it("constructor rever", async () => {
-        await expect(new LovelyFactory__factory(wallet).deploy(wallet.address, await feeToken.getAddress(), 10, 21)).to.be.revertedWith("Lovely Swap: VALIDATION")
-        await expect(new LovelyFactory__factory(wallet).deploy(wallet.address, await feeToken.getAddress(), 21, 10)).to.be.revertedWith("Lovely Swap: VALIDATION")
-        await expect(new LovelyFactory__factory(wallet).deploy(wallet.address, ZERO_ADDRESS, 20, 10)).to.be.revertedWith("Lovely Swap: VALIDATION")
-        await expect(new LovelyFactory__factory(wallet).deploy(ZERO_ADDRESS, await feeToken.getAddress(), 20, 10)).to.be.revertedWith("Lovely Swap: VALIDATION")
+        await expect(new LovelyFactory__factory(wallet).deploy(wallet.address, await feeToken.getAddress(), 10, 21)).to.be.revertedWithCustomError(factory, "ValidationFailed")
+        await expect(new LovelyFactory__factory(wallet).deploy(wallet.address, await feeToken.getAddress(), 21, 10)).to.be.revertedWithCustomError(factory, "ValidationFailed")
+        await expect(new LovelyFactory__factory(wallet).deploy(wallet.address, ZERO_ADDRESS, 20, 10)).to.be.revertedWithCustomError(factory, "ValidationFailed")
+        await expect(new LovelyFactory__factory(wallet).deploy(ZERO_ADDRESS, await feeToken.getAddress(), 20, 10)).to.be.revertedWithCustomError(factory, "ValidationFailed")
 
     })
 
@@ -114,78 +114,78 @@ describe('LovelyFactory', () => {
 
         const timestamp = (await ethers.provider.getBlock('latest'))!.timestamp
         const days7 = 7 * 24 * 60 * 60
-        await expect(factory.connect(other).createPair(tokens[0], tokens[1], 0)).to.be.revertedWith("Lovely Swap: TOKEN_A_NOT_WHITELISTED")
+        await expect(factory.connect(other).createPair(tokens[0], tokens[1], 0)).to.be.revertedWithCustomError(factory, "TokenANotWhitelisted")
         await expect(factory.allowToken(tokens[0], 0)).to.emit(factory, 'TokenAllowed')
-        await expect(factory.connect(other).createPair(tokens[0], tokens[1], 0)).to.be.revertedWith("Lovely Swap: TOKEN_B_NOT_WHITELISTED")
+        await expect(factory.connect(other).createPair(tokens[0], tokens[1], 0)).to.be.revertedWithCustomError(factory, "TokenBNotWhitelisted")
 
-        await expect(factory.allowToken(tokens[0], 0)).to.be.revertedWith('Lovely Swap: ALREADY_WHITELISTED')
-        await expect(factory.allowToken(tokens[1], timestamp + days7 + 100)).to.be.revertedWith('Lovely Swap: LONG_PENDING_PERIOD')
+        await expect(factory.allowToken(tokens[0], 0)).to.be.revertedWithCustomError(factory, "AlreadyWhitelisted")
+        await expect(factory.allowToken(tokens[1], timestamp + days7 + 100)).to.be.revertedWithCustomError(factory, "InvalidPendingPeriod")
 
         await expect(factory.allowToken(tokens[1], timestamp + days7)).to.emit(factory, 'TokenAllowed')
         await expect(factory.allowToken(tokens[2], timestamp + days7)).to.emit(factory, 'TokenAllowed')
         expect((await factory.allowlists(tokens[1]))[1]).to.be.equal(timestamp + days7);
 
 
-        await expect(factory.connect(other).createPair(tokens[1], tokens[2], 0)).to.be.revertedWith("Lovely Swap: FORBIDDEN")
+        await expect(factory.connect(other).createPair(tokens[1], tokens[2], 0)).to.be.revertedWithCustomError(factory, "Forbidden")
 
-        await expect(factory.createPair(tokens[1], tokens[2], timestamp + days7 + 10)).to.be.revertedWith("Lovely Swap: INVALID_ACTIVE_FROM")
+        await expect(factory.createPair(tokens[1], tokens[2], timestamp + days7 + 10)).to.be.revertedWithCustomError(factory, "InvalidActiveFrom")
 
         await expect(factory.createPair(tokens[1], tokens[2], timestamp + days7)).to.emit(factory, 'PairCreated')
 
         await expect(factory.connect(other).allowToken(tokens[3], timestamp + days7)).to.emit(factory, 'TokenAllowed')
         await expect(factory.connect(other).allowToken(tokens[4], timestamp + days7 / 2)).to.emit(factory, 'TokenAllowed')
-        await expect(factory.connect(other).createPair(tokens[3], tokens[4], timestamp + days7 / 2 + 10)).to.be.revertedWith("Lovely Swap: INVALID_ACTIVE_FROM")
+        await expect(factory.connect(other).createPair(tokens[3], tokens[4], timestamp + days7 / 2 + 10)).to.be.revertedWithCustomError(factory, "InvalidActiveFrom")
 
         await expect(factory.connect(other).allowToken(tokens[11], timestamp + days7 / 2)).to.emit(factory, 'TokenAllowed')
         await expect(factory.connect(other).allowToken(tokens[12], timestamp + days7)).to.emit(factory, 'TokenAllowed')
-        await expect(factory.connect(other).createPair(tokens[11], tokens[12], timestamp + days7 / 2 + 10)).to.be.revertedWith("Lovely Swap: INVALID_ACTIVE_FROM")
+        await expect(factory.connect(other).createPair(tokens[11], tokens[12], timestamp + days7 / 2 + 10)).to.be.revertedWithCustomError(factory, "InvalidActiveFrom")
 
 
         await expect(factory.connect(other).allowToken(tokens[5], timestamp + days7)).to.emit(factory, 'TokenAllowed')
         await expect(factory.allowToken(tokens[6], timestamp + days7 / 2)).to.emit(factory, 'TokenAllowed')
-        await expect(factory.connect(other).createPair(tokens[5], tokens[6], timestamp + days7 / 2 + 10)).to.be.revertedWith("Lovely Swap: FORBIDDEN")
+        await expect(factory.connect(other).createPair(tokens[5], tokens[6], timestamp + days7 / 2 + 10)).to.be.revertedWithCustomError(factory, "Forbidden")
 
         await expect(factory.allowToken(tokens[7], timestamp + days7 / 2)).to.emit(factory, 'TokenAllowed')
         await expect(factory.connect(other).allowToken(tokens[8], timestamp + days7)).to.emit(factory, 'TokenAllowed')
-        await expect(factory.connect(other).createPair(tokens[7], tokens[8], timestamp + days7 / 2 + 10)).to.be.revertedWith("Lovely Swap: FORBIDDEN")
+        await expect(factory.connect(other).createPair(tokens[7], tokens[8], timestamp + days7 / 2 + 10)).to.be.revertedWithCustomError(factory, "Forbidden")
 
 
         await expect(factory.allowToken(tokens[9], 0)).to.emit(factory, 'TokenAllowed')
         await expect(factory.connect(other).allowToken(tokens[10], timestamp + days7)).to.emit(factory, 'TokenAllowed')
-        await expect(factory.createPair(tokens[9], tokens[10], timestamp + days7 - 10)).to.be.revertedWith("Lovely Swap: FORBIDDEN")
+        await expect(factory.createPair(tokens[9], tokens[10], timestamp + days7 - 10)).to.be.revertedWithCustomError(factory, "Forbidden")
         
     
     })
 
 
     it('setFeeTo', async () => {
-        await expect(factory.connect(other).setFeeTo(other.address)).to.be.revertedWith('Lovely Swap: FORBIDDEN')
+        await expect(factory.connect(other).setFeeTo(other.address)).to.be.revertedWithCustomError(factory, "Forbidden")
         await factory.setFeeTo(wallet.address)
         expect(await factory.feeTo()).to.eq(wallet.address)
     })
 
     it('ownership', async () => {
-        await expect(factory.connect(other).setFeeToSetter(other.address)).to.be.revertedWith('Lovely Swap: FORBIDDEN')
-        await expect(factory.setFeeToSetter(ZERO_ADDRESS)).to.be.revertedWith('Lovely Swap: VALIDATION')
+        await expect(factory.connect(other).setFeeToSetter(other.address)).to.be.revertedWithCustomError(factory, "Forbidden")
+        await expect(factory.setFeeToSetter(ZERO_ADDRESS)).to.be.revertedWithCustomError(factory, "ValidationFailed")
         await factory.setFeeToSetter(other.address)
         expect(await factory.feeToSetter()).to.eq(other.address)
 
-        await expect(factory.setListingFee(BigInt(1))).to.be.revertedWith('Lovely Swap: FORBIDDEN')
+        await expect(factory.setListingFee(BigInt(1))).to.be.revertedWithCustomError(factory, "Forbidden")
         await factory.connect(other).setListingFee(BigInt(1))
         expect(await factory.listingFee()).to.be.equal(BigInt(1));
 
-        await expect(factory.setFeeToken(wallet.address)).to.be.revertedWith('Lovely Swap: FORBIDDEN')
-        await expect(factory.connect(other).setFeeToken(ZERO_ADDRESS)).to.be.revertedWith('Lovely Swap: VALIDATION')
+        await expect(factory.setFeeToken(wallet.address)).to.be.revertedWithCustomError(factory, "Forbidden")
+        await expect(factory.connect(other).setFeeToken(ZERO_ADDRESS)).to.be.revertedWithCustomError(factory, "ValidationFailed")
 
         await factory.connect(other).setFeeToken(wallet.address)
         expect(await factory.feeToken()).to.be.equal(wallet.address);
 
-        await expect(factory.setTradingFees(BigInt(1), BigInt(1))).to.be.revertedWith('Lovely Swap: FORBIDDEN')
+        await expect(factory.setTradingFees(BigInt(1), BigInt(1))).to.be.revertedWithCustomError(factory, "Forbidden")
         await factory.connect(other).setTradingFees(BigInt(1), BigInt(1))
         expect(await factory.ownerFee()).to.be.equal(BigInt(1));
         expect(await factory.lpFee()).to.be.equal(BigInt(1));
 
-        await expect(factory.connect(other).setTradingFees(BigInt(21), BigInt(1))).to.be.revertedWith('Lovely Swap: VALIDATION')
-        await expect(factory.connect(other).setTradingFees(BigInt(1), BigInt(21))).to.be.revertedWith('Lovely Swap: VALIDATION')
+        await expect(factory.connect(other).setTradingFees(BigInt(21), BigInt(1))).to.be.revertedWithCustomError(factory, "ValidationFailed")
+        await expect(factory.connect(other).setTradingFees(BigInt(1), BigInt(21))).to.be.revertedWithCustomError(factory, "ValidationFailed")
     })
 })

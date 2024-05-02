@@ -44,10 +44,19 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		vaultDeployerAddress = _vaultDeployerAddress;
 	}
 
+	/**
+	 * @dev Returns the number of competitions.
+	 * @return The number of competitions.
+	 */
 	function competitionsLength() external view returns (uint256) {
 		return competitions.length;
 	}
 
+	/**
+	 * @dev Returns the participants of a competition.
+	 * @param competition The competition ID.
+	 * @return The participants array.
+	 */
 	function getParticipants(uint256 competition) external view returns (Participant[] memory) {
 		return competitions[competition].participants;
 	}
@@ -75,30 +84,61 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		}
 		return _participants;
 	}
-
+	/**
+	 * @notice This function returns all pairs registered for a competition
+	 * @param competition The competition ID.
+	 * @return The pairs array.
+	 */
 	function getPairs(uint256 competition) external view returns (address[] memory) {
 		return competitions[competition].pairs;
 	}
 
+	/**
+	 * @notice This function returns all competitions that a pair is part of.
+	 * @param pair The pair address.
+	 * @return The competitions array.
+	 */
 	function getCompetitionsOfPair(address pair) external view returns (uint256[] memory) {
 		return pairToCompetitions[pair];
 	}
 
+	/**
+	 * @notice This function returns the rewards for a specific competition.
+	 * @param competition The competition ID.
+	 * @return The rewards array.
+	 */
 	function getRewards(uint256 competition) external view returns (uint256[] memory) {
 		return competitions[competition].rewards;
 	}
 
+	/**
+	 * @notice This function returns all competitions where an account had participated.
+	 * @param account - target address.
+	 * @return The competitions array.
+	 */
 	function competitionsOf(address account) external view returns (uint256[] memory) {
 		return userCompetitions[account];
 	}
 
+	/**
+	 * @notice the function checks if an account is registered for a competition.
+	 * @param competition The competition ID.
+	 * @param account The account address.
+	 * @return true if the account is registered, false otherwise.
+	 */
 	function isRegistered(uint256 competition, address account) external view returns (bool) {
 		return competitions[competition].registeredUsers[account];
 	}
 
+	/**
+	 * @notice This function sets the competition fee.
+	 * @dev This function requires that the sender is the owner.
+	 * It sets the competition fee and logs the event.
+	 * @param _competitionFee The new competition fee.
+	 */
 	function setCompetitionFee(uint256 _competitionFee) external onlyOwner {
 		competitionFee = _competitionFee;
-		emit CompetitionFeeSet(competitionFee);
+		emit CompetitionFeeSet(_competitionFee);
 	}
 
 	/**
@@ -137,7 +177,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 			address token0 = ILovelyPair(pairs[i]).token0();
 			address token1 = ILovelyPair(pairs[i]).token1();
 			if (ILovelyFactory(factory).getPair(token0, token1) != pairs[i]) revert PairDoesNotExist();
-			if (token0 != competitionToken && token1 != competitionToken) revert NotACompetitionToken();
+			if (token0 != competitionToken && token1 != competitionToken) revert NotACompetitionToken(token0, token1);
 		}
 		uint256 totalRewards;
 		for (uint256 i = 0; i < rewards.length; i++) {
@@ -197,6 +237,12 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		emit ReadyForPayouts(competition);
 	}
 
+	/**
+	 * @notice This function cleans up the competition by removing the pairs from the competition.
+	 * @dev This function requires that the competition exists and is sorted.
+	 * It removes the pairs from the competition and logs the cleanup.
+	 * @param competition The competition ID.
+	 */
 	function cleanUpCompetitions(uint256 competition) external {
 		if (!competitions[competition].sorted) revert NotEnded();
 		for (uint256 i = 0; i < competitions[competition].pairs.length; i++) {
@@ -232,6 +278,13 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		revert NotAWinner();
 	}
 
+	/**
+	 * @notice This function allows the winner to claim their reward.
+	 * @dev This function requires that the competition exists, is sorted, and the participant is a winner.
+	 * It allows the winner to claim their reward and logs the claim.
+	 * @param competition The competition ID.
+	 * @param participantId The participant ID.
+	 */
 	function claimById(uint256 competition, uint256 participantId) external {
 		_claim(competition, participantId);
 	}
