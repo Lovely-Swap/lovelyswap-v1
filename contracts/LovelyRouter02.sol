@@ -469,6 +469,6 @@ contract LovelyRouter02 is ILovelyRouter02 {
 	}
 
 	function getTotalFees() internal view returns (uint) {
-		return ILovelyFactory(factory).ownerFee() + ILovelyFactory(factory).lpFee();
+		return 20;
 	}
 }
