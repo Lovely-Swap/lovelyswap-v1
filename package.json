@@ -13,6 +13,7 @@
     "verify_router": "npx hardhat verify --contract \"contracts/LovelyRouter02.sol:LovelyRouter02\"",
     "deploy_TC_router": "npx hardhat run deploy/deploy_TC_router.ts --network",
     "verify_TC_router": "npx hardhat verify --contract \"contracts/LovelyTCRouter.sol:LovelyTCRouter\"",
+    "verify_pair": "npx hardhat verify --contract \"contracts/LovelyPair.sol:LovelyPair\"",
     "lint": "eslint ./ --fix"
   },
   "author": "",

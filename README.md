@@ -20,11 +20,12 @@ Nodejs: v18.15.0
 ```npm run test```
 
 ## Coverage
-Due to instrumentation that coverage tool uses it's important to update the init code in the ./contracts/libraries/LovelyLibrary.sol. To get the correct init code, compile the contract with the coverage instrumentation and call ```npm run init_code_hash```
+Due to instrumentation that coverage tool uses it's important to update the init code in the ./contracts/libraries/LovelyLibrary.sol. 
+To get the correct init code, compile the contract with the coverage instrumentation and call ```npm run init_code_hash```
 
 When init code is set:
 ```
-npm run converage 
+npm run coverage 
 ```
 
 ## Configuration

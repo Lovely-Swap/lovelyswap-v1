@@ -40,12 +40,6 @@ contract LovelyFactory is ILovelyFactory {
         if (activeFrom > allowlists[tokenA].activeFrom && activeFrom > allowlists[tokenB].activeFrom)
             revert InvalidActiveFrom();
 
-        if (activeFrom < allowlists[tokenA].activeFrom) {
-            if (msg.sender != allowlists[tokenA].creator) revert Forbidden();
-        }
-        if (activeFrom < allowlists[tokenB].activeFrom) {
-            if (msg.sender != allowlists[tokenB].creator) revert Forbidden();
-        }
         if (allowlists[tokenA].activeFrom > block.timestamp) {
             if (msg.sender != allowlists[tokenA].creator) revert Forbidden();
             if (activeFrom > allowlists[tokenA].activeFrom) revert InvalidActiveFrom();
