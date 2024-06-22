@@ -433,7 +433,7 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		uint256 k = left;
 
 		while (i < n1 && j < n2) {
-			if (leftArray[i].tradeVolume <= rightArray[j].tradeVolume) {
+			if (leftArray[i].tradeVolume >= rightArray[j].tradeVolume) {
 				arr[k] = leftArray[i];
 				i++;
 			} else {
@@ -455,4 +455,5 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 			k++;
 		}
 	}
+
 }

@@ -12,7 +12,7 @@ async function main() {
 
     const router = await new LovelyRouter02__factory(deployer).deploy(factory, wrappedNative);
 
-    console.log(`Proxy deployed to ${await router.getAddress()}`);
+    console.log(`Router deployed to ${await router.getAddress()}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
