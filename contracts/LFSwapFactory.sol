@@ -36,10 +36,6 @@ contract LFSwapFactory is ILFSwapFactory {
     ) {
         if (allowlists[tokenA].creator == address(0)) revert TokenANotWhitelisted();
         if (allowlists[tokenB].creator == address(0)) revert TokenBNotWhitelisted();
-
-        if (activeFrom > allowlists[tokenA].activeFrom && activeFrom > allowlists[tokenB].activeFrom)
-            revert InvalidActiveFrom();
-
         if (allowlists[tokenA].activeFrom > block.timestamp) {
             if (msg.sender != allowlists[tokenA].creator) revert Forbidden();
             if (activeFrom > allowlists[tokenA].activeFrom) revert InvalidActiveFrom();
