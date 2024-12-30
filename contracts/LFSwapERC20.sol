@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import { ILovelyERC20 } from "./interfaces/ILovelyERC20.sol";
+import {ILFERC20} from "./interfaces/ILFERC20.sol";
 
-contract LovelyERC20 is ILovelyERC20 {
+contract LFSwapERC20 is ILFERC20 {
 	string public constant name = "Lovely Swap";
 	string public constant symbol = "LS";
 	uint8 public constant decimals = 18;

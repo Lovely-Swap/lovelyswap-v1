@@ -3,14 +3,14 @@ pragma solidity =0.8.20;
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import { ILovelyPair } from "./interfaces/ILovelyPair.sol";
+import {ILFPair} from "./interfaces/ILFPair.sol";
 import { IERC20 } from "./interfaces/IERC20.sol";
-import { ILovelyFactory } from "./interfaces/ILovelyFactory.sol";
-import { ILovelyCallee } from "./interfaces/ILovelyCallee.sol";
-import { LovelyERC20 } from "./LovelyERC20.sol";
+import {ILFFactory} from "./interfaces/ILFFactory.sol";
+import {ILFCallee} from "./interfaces/ILFCallee.sol";
+import {LFSwapERC20} from "./LFSwapERC20.sol";
 import { UQ112x112 } from "./libraries/UQ112x112.sol";
 
-contract LovelyPair is ILovelyPair, LovelyERC20 {
+contract LFSwapPair is ILFPair, LFSwapERC20 {
 	using UQ112x112 for uint224;
 
 	uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
@@ -87,7 +87,7 @@ contract LovelyPair is ILovelyPair, LovelyERC20 {
 
 	// if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
 	function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
-		address feeTo = ILovelyFactory(factory).feeTo();
+		address feeTo = ILFFactory(factory).feeTo();
 		feeOn = feeTo != address(0);
 		uint256 _kLast = kLast; // gas savings
 		if (feeOn) {
@@ -96,7 +96,7 @@ contract LovelyPair is ILovelyPair, LovelyERC20 {
 				uint256 rootKLast = Math.sqrt(_kLast);
 				if (rootK > rootKLast) {
 					uint256 numerator = totalSupply * (rootK - rootKLast);
-					uint256 ownerFee = ILovelyFactory(factory).ownerFee();
+					uint256 ownerFee = ILFFactory(factory).ownerFee();
 					uint256 totalFees = getTotalFees();
 					uint256 feeCoef = (1000 / ((1000 * ownerFee) / totalFees)) - 1; // (1/φ − 1)  where
 					uint256 denominator = rootK * feeCoef + rootKLast;
@@ -178,7 +178,7 @@ contract LovelyPair is ILovelyPair, LovelyERC20 {
 			require(to != _token0 && to != _token1, "Lovely Swap: INVALID_TO");
 			if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
 			if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
-			if (data.length > 0) ILovelyCallee(to).lovelyCall(msg.sender, amount0Out, amount1Out, data);
+			if (data.length > 0) ILFCallee(to).lovelyCall(msg.sender, amount0Out, amount1Out, data);
 			balance0 = IERC20(_token0).balanceOf(address(this));
 			balance1 = IERC20(_token1).balanceOf(address(this));
 		}
@@ -213,6 +213,6 @@ contract LovelyPair is ILovelyPair, LovelyERC20 {
 	}
 
 	function getTotalFees() internal view returns (uint) {
-		return ILovelyFactory(factory).ownerFee() + ILovelyFactory(factory).lpFee();
+		return ILFFactory(factory).ownerFee() + ILFFactory(factory).lpFee();
 	}
 }

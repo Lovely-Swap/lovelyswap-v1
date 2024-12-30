@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import {ILovelyFactory} from "./interfaces/ILovelyFactory.sol";
+import {ILFFactory} from "./interfaces/ILFFactory.sol";
 import {TransferHelper} from "./libraries/TransferHelper.sol";
-import {ILovelyPair, LovelyPair} from "./LovelyPair.sol";
+import {ILFPair, LFSwapPair} from "./LFSwapPair.sol";
 
-contract LovelyFactory is ILovelyFactory {
+contract LFSwapFactory is ILFFactory {
     uint256 public constant MAX_ACTIVE_FROM = 7 * 24 * 60 * 60;
     address public feeTo;
     address public feeToSetter;
@@ -123,7 +123,7 @@ contract LovelyFactory is ILovelyFactory {
      * @notice Creates a pair of given two tokens.
 	 * @dev This function requires that the tokens are not identical, addresses are not zero, and pair of them
 	 * does not already exist.
-	 * It creates a new `LovelyPair` contract for the pair and initializes it with the token addresses and activeFrom timestamp.
+	 * It creates a new `LFSwapPair.sol` contract for the pair and initializes it with the token addresses and activeFrom timestamp.
 	 * The function emits the `PairCreated` event by passing the pair's addresses and length of allPairs array.
 	 * @param tokenA The address of the first token of the pair.
 	 * @param tokenB The address of the second token of the pair.
@@ -140,7 +140,7 @@ contract LovelyFactory is ILovelyFactory {
         if (getPair[token0][token1] != address(0)) revert PairExists(); // single check is sufficient
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
         pair = address(new LovelyPair{salt: salt}());
-        ILovelyPair(pair).initialize(token0, token1, msg.sender, activeFrom);
+        ILFPair(pair).initialize(token0, token1, msg.sender, activeFrom);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);

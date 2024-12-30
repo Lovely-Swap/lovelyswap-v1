@@ -3,7 +3,7 @@ pragma solidity =0.8.20;
 
 import "./IERC20.sol";
 
-interface ILovelyERC20 is IERC20 {
+interface ILFERC20 is IERC20 {
 	function DOMAIN_SEPARATOR() external view returns (bytes32);
 
 	function PERMIT_TYPEHASH() external pure returns (bytes32);

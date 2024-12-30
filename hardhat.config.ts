@@ -43,11 +43,11 @@ const config: HardhatUserConfig = {
     bsc: {
       url: "https://bsc-dataseed.bnbchain.org/",
       chainId: 56,
-      gasPrice: 20000000000,
+      gasPrice: 1000000000,
       accounts: [process.env.MAINNET_PRIVATE_KEY as string]
     },
     polygon: {
-      url: "https://polygon.meowrpc.com/",
+      url: "https://polygon-mainnet.rpcfast.com?api_key=xbhWBI1Wkguk8SNMu1bvvLurPGLXmgwYeC4S6g2H7WdwFigZSmPWVZRxrskEQwIf",
       chainId: 137,
       gasPrice: 20000000000,
       accounts: [process.env.MAINNET_PRIVATE_KEY as string]
@@ -58,13 +58,20 @@ const config: HardhatUserConfig = {
       gasPrice: 20000000000,
       accounts: [process.env.TESTNET_PRIVATE_KEY as string]
     },
+    base: {
+        url: "https://base.llamarpc.com",
+        chainId: 8453,
+        gasPrice: 140000000,
+        accounts: [process.env.MAINNET_PRIVATE_KEY as string]
+    }
   },
   etherscan: {
     apiKey: {
       bscTestnet: process.env.BSC_SCAN_API as string,
       bsc: process.env.BSC_SCAN_API as string,
-      polygon: process.env.POLYGON_SCAN_API as string,
+      polygon: process.env.POLYGONSCAN_API_KEY as string,
       polygonMumbai: process.env.POLYGON_SCAN_API as string,
+      base: process.env.BASE_SCAN_API_KEY as string
     }
   },
   mocha: {

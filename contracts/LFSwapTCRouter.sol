@@ -3,16 +3,16 @@ pragma solidity =0.8.20;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { TransferHelper } from "./libraries/TransferHelper.sol";
-import { LovelyLibrary } from "./libraries/LovelyLibrary.sol";
-import { ILovelyTCRouter } from "./interfaces/ILovelyTCRouter.sol";
-import { ILovelyPair } from "./interfaces/ILovelyPair.sol";
+import {LFLibrary} from "./libraries/LFLibrary.sol";
+import {ILFTCRouter} from "./interfaces/ILFTCRouter.sol";
+import {ILFPair} from "./interfaces/ILFPair.sol";
 import { IERC20 } from "./interfaces/IERC20.sol";
-import { LovelyRouter02 } from "./LovelyRouter02.sol";
+import {LFSwapRouter} from "./LFSwapRouter.sol";
 import { IRewardsVault } from "./interfaces/IRewardsVault.sol";
 import { IRewardsVaultDeployer } from "./interfaces/IRewardsVaultDeployer.sol";
-import { ILovelyFactory } from "./interfaces/ILovelyFactory.sol";
+import {ILFFactory} from "./interfaces/ILFFactory.sol";
 
-contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
+contract LFSwapTCRouter is Ownable, ILFTCRouter, LFSwapRouter {
 	uint256 public immutable maxParticipants;
 	address public immutable vaultDeployerAddress;
 	uint256 private constant DAYS_30 = 30 * 24 * 60 * 60;
@@ -174,9 +174,9 @@ contract LovelyTCRouter is Ownable, ILovelyTCRouter, LovelyRouter02 {
 		if (rewards.length != 4) revert InvalidRewards();
 		if (pairs.length == 0) revert PairsNotProvided();
 		for (uint256 i = 0; i < pairs.length; i++) {
-			address token0 = ILovelyPair(pairs[i]).token0();
-			address token1 = ILovelyPair(pairs[i]).token1();
-			if (ILovelyFactory(factory).getPair(token0, token1) != pairs[i]) revert PairDoesNotExist();
+			address token0 = ILFPair(pairs[i]).token0();
+			address token1 = ILFPair(pairs[i]).token1();
+			if (ILFFactory(factory).getPair(token0, token1) != pairs[i]) revert PairDoesNotExist();
 			if (token0 != competitionToken && token1 != competitionToken) revert NotACompetitionToken(token0, token1);
 		}
 		uint256 totalRewards;

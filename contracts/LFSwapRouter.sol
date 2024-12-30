@@ -2,14 +2,14 @@
 pragma solidity =0.8.20;
 
 import { TransferHelper } from "./libraries/TransferHelper.sol";
-import { ILovelyFactory } from "./interfaces/ILovelyFactory.sol";
-import { ILovelyRouter02 } from "./interfaces/ILovelyRouter02.sol";
-import { LovelyLibrary } from "./libraries/LovelyLibrary.sol";
+import {ILFFactory} from "./interfaces/ILFFactory.sol";
+import {ILFRouter02} from "./interfaces/ILFRouter02.sol";
+import {LFLibrary} from "./libraries/LFLibrary.sol";
 import { IERC20 } from "./interfaces/IERC20.sol";
 import { IWETH } from "./interfaces/IWETH.sol";
-import { ILovelyPair } from "./interfaces/ILovelyPair.sol";
+import {ILFPair} from "./interfaces/ILFPair.sol";
 
-contract LovelyRouter02 is ILovelyRouter02 {
+contract LFSwapRouter is ILFRouter02 {
 	address public immutable override factory;
 	address public immutable override WETH;
 
@@ -37,17 +37,17 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		uint256 amountBMin
 	) internal virtual returns (uint256 amountA, uint256 amountB) {
 		// revert if pair does not exist. Creation of pairs from the router is forbidden
-		if (ILovelyFactory(factory).getPair(tokenA, tokenB) == address(0)) revert PairNotExist();
-		(uint256 reserveA, uint256 reserveB) = LovelyLibrary.getReserves(factory, tokenA, tokenB);
+		if (ILFFactory(factory).getPair(tokenA, tokenB) == address(0)) revert PairNotExist();
+		(uint256 reserveA, uint256 reserveB) = LFLibrary.getReserves(factory, tokenA, tokenB);
 		if (reserveA == 0 && reserveB == 0) {
 			(amountA, amountB) = (amountADesired, amountBDesired);
 		} else {
-			uint256 amountBOptimal = LovelyLibrary.quote(amountADesired, reserveA, reserveB);
+			uint256 amountBOptimal = LFLibrary.quote(amountADesired, reserveA, reserveB);
 			if (amountBOptimal <= amountBDesired) {
 				if (amountBOptimal < amountBMin) revert InsufficientBAmount();
 				(amountA, amountB) = (amountADesired, amountBOptimal);
 			} else {
-				uint256 amountAOptimal = LovelyLibrary.quote(amountBDesired, reserveB, reserveA);
+				uint256 amountAOptimal = LFLibrary.quote(amountBDesired, reserveB, reserveA);
 				assert(amountAOptimal <= amountADesired);
 				if (amountAOptimal < amountAMin) revert InsufficientAAmount();
 				(amountA, amountB) = (amountAOptimal, amountBDesired);
@@ -66,10 +66,10 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		uint256 deadline
 	) external virtual override ensure(deadline) returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
 		(amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin);
-		address pair = LovelyLibrary.pairFor(factory, tokenA, tokenB);
+		address pair = LFLibrary.pairFor(factory, tokenA, tokenB);
 		TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
 		TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
-		liquidity = ILovelyPair(pair).mint(to);
+		liquidity = ILFPair(pair).mint(to);
 	}
 
 	function addLiquidityETH(
@@ -95,11 +95,11 @@ contract LovelyRouter02 is ILovelyRouter02 {
 			amountTokenMin,
 			amountETHMin
 		);
-		address pair = LovelyLibrary.pairFor(factory, token, WETH);
+		address pair = LFLibrary.pairFor(factory, token, WETH);
 		TransferHelper.safeTransferFrom(token, msg.sender, pair, amountToken);
 		IWETH(WETH).deposit{ value: amountETH }();
 		assert(IWETH(WETH).transfer(pair, amountETH));
-		liquidity = ILovelyPair(pair).mint(to);
+		liquidity = ILFPair(pair).mint(to);
 		// refund dust eth, if any
 		if (msg.value > amountETH) TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
 	}
@@ -114,10 +114,10 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		address to,
 		uint256 deadline
 	) public virtual override ensure(deadline) returns (uint256 amountA, uint256 amountB) {
-		address pair = LovelyLibrary.pairFor(factory, tokenA, tokenB);
-		ILovelyPair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
-		(uint256 amount0, uint256 amount1) = ILovelyPair(pair).burn(to);
-		(address token0, ) = LovelyLibrary.sortTokens(tokenA, tokenB);
+		address pair = LFLibrary.pairFor(factory, tokenA, tokenB);
+		ILFPair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
+		(uint256 amount0, uint256 amount1) = ILFPair(pair).burn(to);
+		(address token0, ) = LFLibrary.sortTokens(tokenA, tokenB);
 		(amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
 		if (amountA < amountAMin) revert InsufficientAAmount();
 		if (amountB < amountBMin) revert InsufficientBAmount();
@@ -158,9 +158,9 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		bytes32 r,
 		bytes32 s
 	) external virtual override returns (uint256 amountA, uint256 amountB) {
-		address pair = LovelyLibrary.pairFor(factory, tokenA, tokenB);
+		address pair = LFLibrary.pairFor(factory, tokenA, tokenB);
 		uint256 value = approveMax ? type(uint256).max : liquidity;
-		ILovelyPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+		ILFPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
 		(amountA, amountB) = removeLiquidity(tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline);
 	}
 
@@ -176,9 +176,9 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		bytes32 r,
 		bytes32 s
 	) external virtual override returns (uint256 amountToken, uint256 amountETH) {
-		address pair = LovelyLibrary.pairFor(factory, token, WETH);
+		address pair = LFLibrary.pairFor(factory, token, WETH);
 		uint256 value = approveMax ? type(uint256).max : liquidity;
-		ILovelyPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+		ILFPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
 		(amountToken, amountETH) = removeLiquidityETH(token, liquidity, amountTokenMin, amountETHMin, to, deadline);
 	}
 
@@ -209,9 +209,9 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		bytes32 r,
 		bytes32 s
 	) external virtual override returns (uint256 amountETH) {
-		address pair = LovelyLibrary.pairFor(factory, token, WETH);
+		address pair = LFLibrary.pairFor(factory, token, WETH);
 		uint256 value = approveMax ? type(uint256).max : liquidity;
-		ILovelyPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+		ILFPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
 		amountETH = removeLiquidityETHSupportingFeeOnTransferTokens(
 			token,
 			liquidity,
@@ -227,12 +227,12 @@ contract LovelyRouter02 is ILovelyRouter02 {
 	function _swap(uint[] memory amounts, address[] calldata path, address _to) internal virtual {
 		for (uint256 i; i < path.length - 1; i++) {
 			(address input, address output) = (path[i], path[i + 1]);
-			(address token0, ) = LovelyLibrary.sortTokens(input, output);
+			(address token0, ) = LFLibrary.sortTokens(input, output);
 			uint256 amountOut = amounts[i + 1];
 			(uint256 amount0Out, uint256 amount1Out) = input == token0 ? (uint(0), amountOut) : (amountOut, uint(0));
-			address to = i < path.length - 2 ? LovelyLibrary.pairFor(factory, output, path[i + 2]) : _to;
-			address pair = LovelyLibrary.pairFor(factory, input, output);
-			ILovelyPair(pair).swap(amount0Out, amount1Out, to, new bytes(0));
+			address to = i < path.length - 2 ? LFLibrary.pairFor(factory, output, path[i + 2]) : _to;
+			address pair = LFLibrary.pairFor(factory, input, output);
+			ILFPair(pair).swap(amount0Out, amount1Out, to, new bytes(0));
 			_postTrade(pair, input, amounts, i);
 		}
 	}
@@ -246,12 +246,12 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		address to,
 		uint256 deadline
 	) external virtual override ensure(deadline) returns (uint[] memory amounts) {
-		amounts = LovelyLibrary.getAmountsOut(factory, amountIn, path, getTotalFees());
+		amounts = LFLibrary.getAmountsOut(factory, amountIn, path, getTotalFees());
 		if (amounts[amounts.length - 1] < amountOutMin) revert InsufficientOutputAmount();
 		TransferHelper.safeTransferFrom(
 			path[0],
 			msg.sender,
-			LovelyLibrary.pairFor(factory, path[0], path[1]),
+			LFLibrary.pairFor(factory, path[0], path[1]),
 			amounts[0]
 		);
 		_swap(amounts, path, to);
@@ -264,12 +264,12 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		address to,
 		uint256 deadline
 	) external virtual override ensure(deadline) returns (uint[] memory amounts) {
-		amounts = LovelyLibrary.getAmountsIn(factory, amountOut, path, getTotalFees());
+		amounts = LFLibrary.getAmountsIn(factory, amountOut, path, getTotalFees());
 		if (amounts[0] > amountInMax) revert ExcessiveInputAmount();
 		TransferHelper.safeTransferFrom(
 			path[0],
 			msg.sender,
-			LovelyLibrary.pairFor(factory, path[0], path[1]),
+			LFLibrary.pairFor(factory, path[0], path[1]),
 			amounts[0]
 		);
 		_swap(amounts, path, to);
@@ -282,10 +282,10 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		uint256 deadline
 	) external payable virtual override ensure(deadline) returns (uint[] memory amounts) {
 		if (path[0] != WETH) revert InvalidPath();
-		amounts = LovelyLibrary.getAmountsOut(factory, msg.value, path, getTotalFees());
+		amounts = LFLibrary.getAmountsOut(factory, msg.value, path, getTotalFees());
 		if (amounts[amounts.length - 1] < amountOutMin) revert InsufficientOutputAmount();
 		IWETH(WETH).deposit{ value: amounts[0] }();
-		assert(IWETH(WETH).transfer(LovelyLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
+		assert(IWETH(WETH).transfer(LFLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
 		_swap(amounts, path, to);
 	}
 
@@ -297,12 +297,12 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		uint256 deadline
 	) external virtual override ensure(deadline) returns (uint[] memory amounts) {
 		if (path[path.length - 1] != WETH) revert InvalidPath();
-		amounts = LovelyLibrary.getAmountsIn(factory, amountOut, path, getTotalFees());
+		amounts = LFLibrary.getAmountsIn(factory, amountOut, path, getTotalFees());
 		if (amounts[0] > amountInMax) revert ExcessiveInputAmount();
 		TransferHelper.safeTransferFrom(
 			path[0],
 			msg.sender,
-			LovelyLibrary.pairFor(factory, path[0], path[1]),
+			LFLibrary.pairFor(factory, path[0], path[1]),
 			amounts[0]
 		);
 		_swap(amounts, path, address(this));
@@ -318,12 +318,12 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		uint256 deadline
 	) external virtual override ensure(deadline) returns (uint[] memory amounts) {
 		if (path[path.length - 1] != WETH) revert InvalidPath();
-		amounts = LovelyLibrary.getAmountsOut(factory, amountIn, path, getTotalFees());
+		amounts = LFLibrary.getAmountsOut(factory, amountIn, path, getTotalFees());
 		if (amounts[amounts.length - 1] < amountOutMin) revert InsufficientOutputAmount();
 		TransferHelper.safeTransferFrom(
 			path[0],
 			msg.sender,
-			LovelyLibrary.pairFor(factory, path[0], path[1]),
+			LFLibrary.pairFor(factory, path[0], path[1]),
 			amounts[0]
 		);
 		_swap(amounts, path, address(this));
@@ -338,10 +338,10 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		uint256 deadline
 	) external payable virtual override ensure(deadline) returns (uint[] memory amounts) {
 		if (path[0] != WETH) revert InvalidPath();
-		amounts = LovelyLibrary.getAmountsIn(factory, amountOut, path, getTotalFees());
+		amounts = LFLibrary.getAmountsIn(factory, amountOut, path, getTotalFees());
 		if (amounts[0] > msg.value) revert ExcessiveInputAmount();
 		IWETH(WETH).deposit{ value: amounts[0] }();
-		assert(IWETH(WETH).transfer(LovelyLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
+		assert(IWETH(WETH).transfer(LFLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
 		_swap(amounts, path, to);
 		// refund dust eth, if any
 		if (msg.value > amounts[0]) TransferHelper.safeTransferETH(msg.sender, msg.value - amounts[0]);
@@ -352,8 +352,8 @@ contract LovelyRouter02 is ILovelyRouter02 {
 	function _swapSupportingFeeOnTransferTokens(address[] calldata path, address _to) internal virtual {
 		for (uint256 i; i < path.length - 1; i++) {
 			(address input, address output) = (path[i], path[i + 1]);
-			(address token0, ) = LovelyLibrary.sortTokens(input, output);
-			ILovelyPair pair = ILovelyPair(LovelyLibrary.pairFor(factory, input, output));
+			(address token0, ) = LFLibrary.sortTokens(input, output);
+			ILFPair pair = ILFPair(LFLibrary.pairFor(factory, input, output));
 			uint256 amountInput;
 			uint256 amountOutput;
 			{
@@ -363,12 +363,12 @@ contract LovelyRouter02 is ILovelyRouter02 {
 					? (reserve0, reserve1)
 					: (reserve1, reserve0);
 				amountInput = IERC20(input).balanceOf(address(pair)) - reserveInput;
-				amountOutput = LovelyLibrary.getAmountOut(amountInput, reserveInput, reserveOutput, getTotalFees());
+				amountOutput = LFLibrary.getAmountOut(amountInput, reserveInput, reserveOutput, getTotalFees());
 			}
 			(uint256 amount0Out, uint256 amount1Out) = input == token0
 				? (uint(0), amountOutput)
 				: (amountOutput, uint(0));
-			address to = i < path.length - 2 ? LovelyLibrary.pairFor(factory, output, path[i + 2]) : _to;
+			address to = i < path.length - 2 ? LFLibrary.pairFor(factory, output, path[i + 2]) : _to;
 			pair.swap(amount0Out, amount1Out, to, new bytes(0));
 		}
 	}
@@ -383,7 +383,7 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		TransferHelper.safeTransferFrom(
 			path[0],
 			msg.sender,
-			LovelyLibrary.pairFor(factory, path[0], path[1]),
+			LFLibrary.pairFor(factory, path[0], path[1]),
 			amountIn
 		);
 		uint256 balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
@@ -401,7 +401,7 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		if (path[0] != WETH) revert InvalidPath();
 		uint256 amountIn = msg.value;
 		IWETH(WETH).deposit{ value: amountIn }();
-		assert(IWETH(WETH).transfer(LovelyLibrary.pairFor(factory, path[0], path[1]), amountIn));
+		assert(IWETH(WETH).transfer(LFLibrary.pairFor(factory, path[0], path[1]), amountIn));
 		uint256 balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
 		_swapSupportingFeeOnTransferTokens(path, to);
 		if (IERC20(path[path.length - 1]).balanceOf(to) - balanceBefore < amountOutMin)
@@ -419,7 +419,7 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		TransferHelper.safeTransferFrom(
 			path[0],
 			msg.sender,
-			LovelyLibrary.pairFor(factory, path[0], path[1]),
+			LFLibrary.pairFor(factory, path[0], path[1]),
 			amountIn
 		);
 		_swapSupportingFeeOnTransferTokens(path, address(this));
@@ -435,7 +435,7 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		uint256 reserveA,
 		uint256 reserveB
 	) public pure virtual override returns (uint256 amountB) {
-		return LovelyLibrary.quote(amountA, reserveA, reserveB);
+		return LFLibrary.quote(amountA, reserveA, reserveB);
 	}
 
 	function getAmountOut(
@@ -443,7 +443,7 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		uint256 reserveIn,
 		uint256 reserveOut
 	) public view virtual override returns (uint256 amountOut) {
-		return LovelyLibrary.getAmountOut(amountIn, reserveIn, reserveOut, getTotalFees());
+		return LFLibrary.getAmountOut(amountIn, reserveIn, reserveOut, getTotalFees());
 	}
 
 	function getAmountIn(
@@ -451,24 +451,24 @@ contract LovelyRouter02 is ILovelyRouter02 {
 		uint256 reserveIn,
 		uint256 reserveOut
 	) public view virtual override returns (uint256 amountIn) {
-		return LovelyLibrary.getAmountIn(amountOut, reserveIn, reserveOut, getTotalFees());
+		return LFLibrary.getAmountIn(amountOut, reserveIn, reserveOut, getTotalFees());
 	}
 
 	function getAmountsOut(
 		uint256 amountIn,
 		address[] calldata path
 	) public view virtual override returns (uint[] memory amounts) {
-		return LovelyLibrary.getAmountsOut(factory, amountIn, path, getTotalFees());
+		return LFLibrary.getAmountsOut(factory, amountIn, path, getTotalFees());
 	}
 
 	function getAmountsIn(
 		uint256 amountOut,
 		address[] calldata path
 	) public view virtual override returns (uint[] memory amounts) {
-		return LovelyLibrary.getAmountsIn(factory, amountOut, path, getTotalFees());
+		return LFLibrary.getAmountsIn(factory, amountOut, path, getTotalFees());
 	}
 
 	function getTotalFees() internal view returns (uint) {
-		return ILovelyFactory(factory).ownerFee() + ILovelyFactory(factory).lpFee();
+		return ILFFactory(factory).ownerFee() + ILFFactory(factory).lpFee();
 	}
 }

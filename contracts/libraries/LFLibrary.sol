@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import "../interfaces/ILovelyPair.sol";
+import "../interfaces/ILFPair.sol";
 
-library LovelyLibrary {
+library LFLibrary {
 	error IdenticalAddresses();
 	error ZeroAddress();
 	error InsufficientAmount();
@@ -45,7 +45,7 @@ library LovelyLibrary {
 		address tokenB
 	) internal view returns (uint256 reserveA, uint256 reserveB) {
 		(address token0, ) = sortTokens(tokenA, tokenB);
-		(uint112 reserve0, uint112 reserve1, ) = ILovelyPair(pairFor(factory, tokenA, tokenB)).getReserves();
+		(uint112 reserve0, uint112 reserve1, ) = ILFPair(pairFor(factory, tokenA, tokenB)).getReserves();
 		(reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
 	}
 
