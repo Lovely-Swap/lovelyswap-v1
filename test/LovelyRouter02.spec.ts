@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import { getBigInt, MaxUint256 } from 'ethers'
-import { ERC20, DeflatingERC20__factory, DeflatingERC20, LovelyRouter02, WETH9, LovelyPair, LovelyPair__factory } from '../typechain-types';
+import { ERC20, DeflatingERC20__factory, DeflatingERC20, LFSwapRouter, WETH9, LFSwapPair, LFSwapPair__factory } from '../typechain-types';
 
 import { pairFixture } from './shared/fixtures'
 import { expandTo18Decimals, MINIMUM_LIQUIDITY } from './shared/utilities'
@@ -14,13 +14,13 @@ const overrides = {
     gasLimit: 9999999
 }
 
-describe('LovelyRouter02', () => {
+describe('LFSwapRouter', () => {
     let wallet: SignerWithAddress;
 
 
     let token0: ERC20
     let token1: ERC20
-    let router: LovelyRouter02
+    let router: LFSwapRouter
     beforeEach(async function () {
         const accounts = await ethers.getSigners();
         wallet = accounts[0];
@@ -97,8 +97,8 @@ describe('fee-on-transfer tokens', () => {
 
     let DTT: DeflatingERC20
     let WETH: WETH9
-    let router: LovelyRouter02
-    let pair: LovelyPair
+    let router: LFSwapRouter
+    let pair: LFSwapPair
     beforeEach(async function () {
         const accounts = await ethers.getSigners();
         wallet = accounts[0];
@@ -112,7 +112,7 @@ describe('fee-on-transfer tokens', () => {
         // make a DTT<>WETH pair
         await fixture.factory.createPair(await DTT.getAddress(), await WETH.getAddress(), 0)
         const pairAddress = await fixture.factory.getPair(await DTT.getAddress(), await WETH.getAddress())
-        pair = LovelyPair__factory.connect(pairAddress, wallet)
+        pair = LFSwapPair__factory.connect(pairAddress, wallet)
     })
 
     afterEach(async function () {
@@ -418,7 +418,7 @@ describe('fee-on-transfer tokens: reloaded', () => {
     let DTT2: DeflatingERC20
     let DTT3: DeflatingERC20
 
-    let router: LovelyRouter02
+    let router: LFSwapRouter
     beforeEach(async function () {
         const accounts = await ethers.getSigners();
         wallet = accounts[0];

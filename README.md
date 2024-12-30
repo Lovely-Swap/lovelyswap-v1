@@ -1,6 +1,6 @@
-# LovelyFinance
+# LFSwapFinance
 
-This project contains smart contracts for Lovely Finance.
+This project contains smart contracts for LFSwap Finance.
 
 **Note:** Trading competition contract has a limit of 500 participants for each competition.
 On average, it takes 7678556 gas to sort 250 participants. 2811580 gas is used for 100 participant. 
@@ -20,7 +20,7 @@ Nodejs: v18.15.0
 ```npm run test```
 
 ## Coverage
-Due to instrumentation that coverage tool uses it's important to update the init code in the ./contracts/libraries/LovelyLibrary.sol. 
+Due to instrumentation that coverage tool uses it's important to update the init code in the ./contracts/libraries/LFSwapLibrary.sol. 
 To get the correct init code, compile the contract with the coverage instrumentation and call ```npm run init_code_hash```
 
 When init code is set:

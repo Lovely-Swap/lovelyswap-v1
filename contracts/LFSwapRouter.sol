@@ -2,14 +2,14 @@
 pragma solidity =0.8.20;
 
 import { TransferHelper } from "./libraries/TransferHelper.sol";
-import {ILFFactory} from "./interfaces/ILFFactory.sol";
-import {ILFRouter02} from "./interfaces/ILFRouter02.sol";
+import {ILFSwapFactory} from "./interfaces/ILFSwapFactory.sol";
+import {ILFSwapRouter02} from "./interfaces/ILFSwapRouter02.sol";
 import {LFLibrary} from "./libraries/LFLibrary.sol";
 import { IERC20 } from "./interfaces/IERC20.sol";
 import { IWETH } from "./interfaces/IWETH.sol";
 import {ILFPair} from "./interfaces/ILFPair.sol";
 
-contract LFSwapRouter is ILFRouter02 {
+contract LFSwapRouter is ILFSwapRouter02 {
 	address public immutable override factory;
 	address public immutable override WETH;
 
@@ -37,7 +37,7 @@ contract LFSwapRouter is ILFRouter02 {
 		uint256 amountBMin
 	) internal virtual returns (uint256 amountA, uint256 amountB) {
 		// revert if pair does not exist. Creation of pairs from the router is forbidden
-		if (ILFFactory(factory).getPair(tokenA, tokenB) == address(0)) revert PairNotExist();
+		if (ILFSwapFactory(factory).getPair(tokenA, tokenB) == address(0)) revert PairNotExist();
 		(uint256 reserveA, uint256 reserveB) = LFLibrary.getReserves(factory, tokenA, tokenB);
 		if (reserveA == 0 && reserveB == 0) {
 			(amountA, amountB) = (amountADesired, amountBDesired);
@@ -469,6 +469,6 @@ contract LFSwapRouter is ILFRouter02 {
 	}
 
 	function getTotalFees() internal view returns (uint) {
-		return ILFFactory(factory).ownerFee() + ILFFactory(factory).lpFee();
+		return ILFSwapFactory(factory).ownerFee() + ILFSwapFactory(factory).lpFee();
 	}
 }

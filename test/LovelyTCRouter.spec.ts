@@ -1,9 +1,9 @@
 import { expect } from 'chai'
 import { getBigInt, MaxUint256 } from 'ethers'
 import {
-    ERC20, LovelyTCRouter, LovelyTCRouter__factory, WETH9, LovelyPair, LovelyFactory, RouterEventEmitter,
+    ERC20, LFSwapTCRouter, LFSwapTCRouter__factory, WETH9, LFSwapPair, LFSwapFactory, RouterEventEmitter,
     DeflatingERC20, DeflatingERC20__factory,
-    LovelyRouter02,
+    LFSwapRouter,
     ERC20__factory,
     RewardsVault, RewardsVault__factory,
     RewardsVaultDeployer, RewardsVaultDeployer__factory
@@ -23,7 +23,7 @@ const overrides = {
 }
 
 
-describe('LovelyTCRouter', () => {
+describe('LFSwapTCRouter', () => {
     const DAYS_30 = 30 * 24 * 60 * 60;
     const TC_CREATE_FEE = BigInt(100000)
     let wallet: SignerWithAddress;
@@ -31,13 +31,13 @@ describe('LovelyTCRouter', () => {
 
     let token0: ERC20
     let token1: ERC20
-    let router: LovelyTCRouter
+    let router: LFSwapTCRouter
 
     let WETH: WETH9
     let WETHPartner: ERC20
-    let factory: LovelyFactory
-    let pair: LovelyPair
-    let WETHPair: LovelyPair
+    let factory: LFSwapFactory
+    let pair: LFSwapPair
+    let WETHPair: LFSwapPair
     let routerEventEmitter: RouterEventEmitter
     let rewardsVaultFactory: RewardsVaultDeployer
 
@@ -51,7 +51,7 @@ describe('LovelyTCRouter', () => {
         WETHPartner = fixture.WETHPartner
         factory = fixture.factory
         rewardsVaultFactory = await new RewardsVaultDeployer__factory(wallet).deploy();
-        router = await new LovelyTCRouter__factory(wallet).deploy(factory, WETH, rewardsVaultFactory, TC_CREATE_FEE, 500);
+        router = await new LFSwapTCRouter__factory(wallet).deploy(factory, WETH, rewardsVaultFactory, TC_CREATE_FEE, 500);
         pair = fixture.pair
         WETHPair = fixture.WETHPair
         routerEventEmitter = fixture.routerEventEmitter
@@ -320,7 +320,7 @@ describe('LovelyTCRouter', () => {
             })
 
             it('Clean up', async () => {
-                router = await new LovelyTCRouter__factory(wallet).deploy(factory, WETH, rewardsVaultFactory, TC_CREATE_FEE, 2);
+                router = await new LFSwapTCRouter__factory(wallet).deploy(factory, WETH, rewardsVaultFactory, TC_CREATE_FEE, 2);
                 await token0.connect(accounts[0]).approve(await router.getAddress(), MaxUint256)
                 await token0.connect(accounts[0]).mint(expandTo18Decimals(200))
                 const pairs = [await pair.getAddress()]
@@ -340,7 +340,7 @@ describe('LovelyTCRouter', () => {
             })
 
             it('trades over max participants ', async () => {
-                router = await new LovelyTCRouter__factory(wallet).deploy(factory, WETH, rewardsVaultFactory, TC_CREATE_FEE, 2);
+                router = await new LFSwapTCRouter__factory(wallet).deploy(factory, WETH, rewardsVaultFactory, TC_CREATE_FEE, 2);
                 await token0.connect(accounts[0]).approve(await router.getAddress(), MaxUint256)
                 await token0.connect(accounts[0]).mint(expandTo18Decimals(200))
                 const pairs = [await pair.getAddress()]

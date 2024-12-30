@@ -30,7 +30,7 @@ library LFLibrary {
 							hex"ff",
 							factory,
 							keccak256(abi.encodePacked(token0, token1)),
-							hex"2eb39871955a0b7ee12591f8401cc8367dd5246a94c6b85bd160b84343d329dc"
+							hex"4f0e7f2ba2d361c9576e85130c101706b2860b2b8950681bda65071c891b2b0d"
 						)
 					)
 				)

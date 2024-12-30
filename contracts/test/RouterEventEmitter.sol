@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import "../interfaces/ILFRouter01.sol";
+import "../interfaces/ILFSwapRouter01.sol";
 
 contract RouterEventEmitter {
 	event Amounts(uint[] amounts);
@@ -18,7 +18,7 @@ contract RouterEventEmitter {
 	) external {
 		(bool success, bytes memory returnData) = router.delegatecall(
 			abi.encodeWithSelector(
-				ILFRouter01(router).swapExactTokensForTokens.selector,
+				ILFSwapRouter01(router).swapExactTokensForTokens.selector,
 				amountIn,
 				amountOutMin,
 				path,
@@ -40,7 +40,7 @@ contract RouterEventEmitter {
 	) external {
 		(bool success, bytes memory returnData) = router.delegatecall(
 			abi.encodeWithSelector(
-				ILFRouter01(router).swapTokensForExactTokens.selector,
+				ILFSwapRouter01(router).swapTokensForExactTokens.selector,
 				amountOut,
 				amountInMax,
 				path,
@@ -61,7 +61,7 @@ contract RouterEventEmitter {
 	) external payable {
 		(bool success, bytes memory returnData) = router.delegatecall(
 			abi.encodeWithSelector(
-				ILFRouter01(router).swapExactETHForTokens.selector,
+				ILFSwapRouter01(router).swapExactETHForTokens.selector,
 				amountOutMin,
 				path,
 				to,
@@ -82,7 +82,7 @@ contract RouterEventEmitter {
 	) external {
 		(bool success, bytes memory returnData) = router.delegatecall(
 			abi.encodeWithSelector(
-				ILFRouter01(router).swapTokensForExactETH.selector,
+				ILFSwapRouter01(router).swapTokensForExactETH.selector,
 				amountOut,
 				amountInMax,
 				path,
@@ -104,7 +104,7 @@ contract RouterEventEmitter {
 	) external {
 		(bool success, bytes memory returnData) = router.delegatecall(
 			abi.encodeWithSelector(
-				ILFRouter01(router).swapExactTokensForETH.selector,
+				ILFSwapRouter01(router).swapExactTokensForETH.selector,
 				amountIn,
 				amountOutMin,
 				path,
@@ -125,7 +125,7 @@ contract RouterEventEmitter {
 	) external payable {
 		(bool success, bytes memory returnData) = router.delegatecall(
 			abi.encodeWithSelector(
-				ILFRouter01(router).swapETHForExactTokens.selector,
+				ILFSwapRouter01(router).swapETHForExactTokens.selector,
 				amountOut,
 				path,
 				to,

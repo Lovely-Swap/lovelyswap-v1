@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import "./ILFRouter02.sol";
+import "./ILFSwapRouter02.sol";
 
-interface ILFTCRouter is ILFRouter02 {
+interface ILFSwapTCRouter is ILFSwapRouter02 {
 	event CompetitionCreated(uint256 indexed id);
 	event Registered(address indexed account, uint256 indexed id);
 	event ReadyForPayouts(uint256 indexed id);

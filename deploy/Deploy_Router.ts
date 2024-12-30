@@ -1,6 +1,6 @@
 import { ethers, upgrades } from "hardhat";
 import { config as dotEnvConfig } from "dotenv";
-import { LovelyRouter02__factory } from '../typechain-types';
+import { LFSwapRouter02__factory } from '../typechain-types';
 
 dotEnvConfig();
 
@@ -10,7 +10,7 @@ async function main() {
     const factory = process.env.FACTORY_ADDRESS as string;
     const wrappedNative = process.env.WRAPPED_NATIVE_ADDRESS as string;
 
-    const router = await new LovelyRouter02__factory(deployer).deploy(factory, wrappedNative);
+    const router = await new LFSwapRouter02__factory(deployer).deploy(factory, wrappedNative);
 
     console.log(`Router deployed to ${await router.getAddress()}`);
 }

@@ -4,15 +4,15 @@ pragma solidity =0.8.20;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { TransferHelper } from "./libraries/TransferHelper.sol";
 import {LFLibrary} from "./libraries/LFLibrary.sol";
-import {ILFTCRouter} from "./interfaces/ILFTCRouter.sol";
+import {ILFSwapTCRouter} from "./interfaces/ILFSwapTCRouter.sol";
 import {ILFPair} from "./interfaces/ILFPair.sol";
 import { IERC20 } from "./interfaces/IERC20.sol";
 import {LFSwapRouter} from "./LFSwapRouter.sol";
 import { IRewardsVault } from "./interfaces/IRewardsVault.sol";
 import { IRewardsVaultDeployer } from "./interfaces/IRewardsVaultDeployer.sol";
-import {ILFFactory} from "./interfaces/ILFFactory.sol";
+import {ILFSwapFactory} from "./interfaces/ILFSwapFactory.sol";
 
-contract LFSwapTCRouter is Ownable, ILFTCRouter, LFSwapRouter {
+contract LFSwapTCRouter is Ownable, ILFSwapTCRouter, LFSwapRouter {
 	uint256 public immutable maxParticipants;
 	address public immutable vaultDeployerAddress;
 	uint256 private constant DAYS_30 = 30 * 24 * 60 * 60;
@@ -38,7 +38,7 @@ contract LFSwapTCRouter is Ownable, ILFTCRouter, LFSwapRouter {
 		address _vaultDeployerAddress,
 		uint256 _competitionFee,
 		uint256 _maxParticipants
-	) LovelyRouter02(_factory, _WETH) Ownable(msg.sender) {
+	) LFSwapRouter(_factory, _WETH) Ownable(msg.sender) {
 		competitionFee = _competitionFee;
 		maxParticipants = _maxParticipants;
 		vaultDeployerAddress = _vaultDeployerAddress;
@@ -176,7 +176,7 @@ contract LFSwapTCRouter is Ownable, ILFTCRouter, LFSwapRouter {
 		for (uint256 i = 0; i < pairs.length; i++) {
 			address token0 = ILFPair(pairs[i]).token0();
 			address token1 = ILFPair(pairs[i]).token1();
-			if (ILFFactory(factory).getPair(token0, token1) != pairs[i]) revert PairDoesNotExist();
+			if (ILFSwapFactory(factory).getPair(token0, token1) != pairs[i]) revert PairDoesNotExist();
 			if (token0 != competitionToken && token1 != competitionToken) revert NotACompetitionToken(token0, token1);
 		}
 		uint256 totalRewards;

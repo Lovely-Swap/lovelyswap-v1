@@ -1,11 +1,11 @@
 import { ethers, upgrades } from "hardhat";
 import { config as dotEnvConfig } from "dotenv";
-import { LovelyFactory__factory } from '../typechain-types';
+import { LFSwapFactory__factory } from '../typechain-types';
 
 dotEnvConfig();
 
 async function main() {
-  const ContractFactory = await ethers.getContractFactory("LovelyFactory");
+  const ContractFactory = await ethers.getContractFactory("LFSwapFactory");
   const [deployer] = await ethers.getSigners();
 
   const feeToSetter = process.env.FEE_SETTER_ADDRESS as string;
@@ -13,7 +13,7 @@ async function main() {
   const ownerFee = process.env.OWNER_FEE as string;
   const lpFee = process.env.LP_FEE as string;
 
-  const factory = await new LovelyFactory__factory(deployer).deploy(feeToSetter, feeToken, ownerFee, lpFee);
+  const factory = await new LFSwapFactory__factory(deployer).deploy(feeToSetter, feeToken, ownerFee, lpFee);
 
   console.log(`Factory deployed to ${await factory.getAddress()}`);
 }

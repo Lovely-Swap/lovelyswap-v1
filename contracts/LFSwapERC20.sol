@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import {ILFERC20} from "./interfaces/ILFERC20.sol";
+import {ILFSwapERC20} from "./interfaces/ILFSwapERC20.sol";
 
-contract LFSwapERC20 is ILFERC20 {
-	string public constant name = "Lovely Swap";
-	string public constant symbol = "LS";
+contract LFSwapERC20 is ILFSwapERC20 {
+	string public constant name = "LFSwap";
+	string public constant symbol = "LFS";
 	uint8 public constant decimals = 18;
 	uint256 public totalSupply;
 	mapping(address => uint256) public balanceOf;
@@ -82,7 +82,7 @@ contract LFSwapERC20 is ILFERC20 {
 		bytes32 r,
 		bytes32 s
 	) external {
-		require(deadline >= block.timestamp, "Lovely Swap: EXPIRED");
+		require(deadline >= block.timestamp, "LFSwap Swap: EXPIRED");
 		bytes32 digest = keccak256(
 			abi.encodePacked(
 				"\x19\x01",
@@ -91,7 +91,7 @@ contract LFSwapERC20 is ILFERC20 {
 			)
 		);
 		address recoveredAddress = ecrecover(digest, v, r, s);
-		require(recoveredAddress != address(0) && recoveredAddress == owner, "Lovely Swap: INVALID_SIGNATURE");
+		require(recoveredAddress != address(0) && recoveredAddress == owner, "LFSwap Swap: INVALID_SIGNATURE");
 		_approve(owner, spender, value);
 	}
 }

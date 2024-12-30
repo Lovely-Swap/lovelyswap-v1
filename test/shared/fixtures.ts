@@ -2,8 +2,8 @@ import { Wallet } from 'ethers'
 
 import { expandTo18Decimals } from './utilities'
 import {
-  ERC20, ERC20__factory, WETH9, WETH9__factory, LovelyFactory, LovelyFactory__factory, LovelyPair, LovelyPair__factory,
-  LovelyRouter02, LovelyRouter02__factory, RouterEventEmitter, RouterEventEmitter__factory, Callback__factory, Callback
+  ERC20, ERC20__factory, WETH9, WETH9__factory, LFSwapFactory, LFSwapFactory__factory, LFSwapPair, LFSwapPair__factory,
+  LFSwapRouter, LFSwapRouter__factory, RouterEventEmitter, RouterEventEmitter__factory, Callback__factory, Callback
 } from '../../typechain-types'
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { ethers } from 'hardhat';
@@ -13,7 +13,7 @@ const overrides = {
 }
 
 interface FactoryFixture {
-  factory: LovelyFactory,
+  factory: LFSwapFactory,
   feeToken: ERC20
 }
 
@@ -23,17 +23,17 @@ interface V2Fixture extends FactoryFixture {
   token2: ERC20
   WETH: WETH9
   WETHPartner: ERC20
-  router02: LovelyRouter02
+  router02: LFSwapRouter
   routerEventEmitter: RouterEventEmitter
-  pair: LovelyPair
-  pair2: LovelyPair
-  WETHPair: LovelyPair
+  pair: LFSwapPair
+  pair2: LFSwapPair
+  WETHPair: LFSwapPair
   callbackHelper: Callback
 }
 
 export async function factoryFixture(wallet: SignerWithAddress): Promise<FactoryFixture> {
   const feeToken = await new ERC20__factory(wallet).deploy(expandTo18Decimals(10000));
-  const factory = await new LovelyFactory__factory(wallet).deploy(wallet.address, await feeToken.getAddress(), 10, 20);
+  const factory = await new LFSwapFactory__factory(wallet).deploy(wallet.address, await feeToken.getAddress(), 10, 20);
   return { factory, feeToken }
 }
 
@@ -56,14 +56,14 @@ export async function pairFixture(wallet: SignerWithAddress): Promise<V2Fixture>
   const timestamp = (await ethers.provider.getBlock('latest'))!.timestamp
   await factory.createPair(await tokenA.getAddress(), await tokenB.getAddress(), 0)
   const pairAddress = await factory.getPair(await tokenA.getAddress(), await tokenB.getAddress())
-  const pair = LovelyPair__factory.connect(pairAddress, wallet);
+  const pair = LFSwapPair__factory.connect(pairAddress, wallet);
 
   await factory.createPair(await tokenB.getAddress(), await tokenC.getAddress(), 0)
   const pairAddress2 = await factory.getPair(await tokenB.getAddress(), await tokenC.getAddress())
-  const pair2 = LovelyPair__factory.connect(pairAddress2, wallet);
+  const pair2 = LFSwapPair__factory.connect(pairAddress2, wallet);
 
 
-  const router02 = await new LovelyRouter02__factory(wallet).deploy(await factory.getAddress(), await WETH.getAddress());
+  const router02 = await new LFSwapRouter__factory(wallet).deploy(await factory.getAddress(), await WETH.getAddress());
 
 
   const token0Address = (await pair.token0())
@@ -75,7 +75,7 @@ export async function pairFixture(wallet: SignerWithAddress): Promise<V2Fixture>
 
   await factory.createPair(await WETH.getAddress(), await WETHPartner.getAddress(), 0);
   const WETHPairAddress = await factory.getPair(await WETH.getAddress(), await WETHPartner.getAddress())
-  const WETHPair = LovelyPair__factory.connect(WETHPairAddress, wallet);
+  const WETHPair = LFSwapPair__factory.connect(WETHPairAddress, wallet);
 
   const callbackHelper = await new Callback__factory(wallet).deploy();
 

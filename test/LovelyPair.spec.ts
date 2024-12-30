@@ -4,21 +4,21 @@ import { ethers } from "hardhat"
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { expandTo18Decimals, mineBlock, encodePrice } from './shared/utilities'
 import { pairFixture } from './shared/fixtures'
-import { ERC20, LovelyFactory, LovelyPair, ERC20__factory, LovelyPair__factory, Callback } from '../typechain-types';
+import { ERC20, LFSwapFactory, LFSwapPair, ERC20__factory, LFSwapPair__factory, Callback } from '../typechain-types';
 import { ZERO_ADDRESS } from '../util/utilities';
 
 const MINIMUM_LIQUIDITY = BigInt(10 ** 3)
 
-describe('LovelyPair', () => {
+describe('LFSwapPair', () => {
 
     let wallet: SignerWithAddress;
     let other: SignerWithAddress;
 
 
-    let factory: LovelyFactory
+    let factory: LFSwapFactory
     let token0: ERC20
     let token1: ERC20
-    let pair: LovelyPair
+    let pair: LFSwapPair
     let callbackHelper: Callback
     beforeEach(async () => {
         const accounts = await ethers.getSigners();
@@ -40,17 +40,17 @@ describe('LovelyPair', () => {
         await factory.allowToken(token2, timestamp + days7);
         await factory.createPair(token1, token2, timestamp + days7);
         const pairAddress = await factory.getPair(await token1.getAddress(), await token2.getAddress())
-        const pair = LovelyPair__factory.connect(pairAddress, wallet);
+        const pair = LFSwapPair__factory.connect(pairAddress, wallet);
 
         const token1Amount = expandTo18Decimals(1)
         const token2Amount = expandTo18Decimals(4)
         await token1.transfer(await pair.getAddress(), token1Amount)
         await token2.transfer(await pair.getAddress(), token2Amount)
-        await expect(pair.mint(other.address)).to.be.rejectedWith("Lovely Swap: NOT ACTIVE")
+        await expect(pair.mint(other.address)).to.be.rejectedWith("LFSwap Swap: NOT ACTIVE")
         await expect(pair.mint(wallet.address)).to.emit(pair, 'Transfer')
-        await expect(pair.mint(wallet.address)).to.be.revertedWith("Lovely Swap: INSUFFICIENT_LIQUIDITY_MINTED")
+        await expect(pair.mint(wallet.address)).to.be.revertedWith("LFSwap Swap: INSUFFICIENT_LIQUIDITY_MINTED")
 
-        await expect(pair.initialize(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, 0)).to.be.revertedWith("Lovely Swap: FORBIDDEN")
+        await expect(pair.initialize(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, 0)).to.be.revertedWith("LFSwap Swap: FORBIDDEN")
     })
 
     it('skim', async () => {
@@ -107,7 +107,7 @@ describe('LovelyPair', () => {
             await addLiquidity(token0Amount, token1Amount)
             await token0.transfer(await pair.getAddress(), swapAmount)
             await expect(pair.swap(0, getBigInt(expectedOutputAmount) + getBigInt(1), wallet.address, '0x')).to.be.revertedWith(
-                'Lovely Swap: K'
+                'LFSwap Swap: K'
             )
             await pair.swap(0, expectedOutputAmount, wallet.address, '0x')
         })
@@ -125,7 +125,7 @@ describe('LovelyPair', () => {
             await addLiquidity(token0Amount, token1Amount)
             await token0.transfer(await pair.getAddress(), inputAmount)
             await expect(pair.swap(getBigInt(outputAmount) + getBigInt(1), 0, wallet.address, '0x')).to.be.revertedWith(
-                'Lovely Swap: K'
+                'LFSwap Swap: K'
             )
             await pair.swap(outputAmount, 0, wallet.address, '0x')
         })
@@ -139,11 +139,11 @@ describe('LovelyPair', () => {
         const swapAmount = expandTo18Decimals(1)
         const expectedOutputAmount = getBigInt('1662497915624478906')
         await token0.transfer(await pair.getAddress(), swapAmount)
-        await expect(pair.swap(0, 0, wallet.address, '0x')).to.be.revertedWith("Lovely Swap: INSUFFICIENT_OUTPUT_AMOUNT")
-        await expect(pair.swap(expectedOutputAmount, expandTo18Decimals(99999999), wallet.address, '0x')).to.be.revertedWith("Lovely Swap: INSUFFICIENT_LIQUIDITY")
-        await expect(pair.swap(expandTo18Decimals(99999999), expectedOutputAmount, wallet.address, '0x')).to.be.revertedWith("Lovely Swap: INSUFFICIENT_LIQUIDITY")
-        await expect(pair.swap(0, expectedOutputAmount, await token0.getAddress(), '0x')).to.be.revertedWith("Lovely Swap: INVALID_TO")
-        await expect(pair.swap(0, expectedOutputAmount, await token1.getAddress(), '0x')).to.be.revertedWith("Lovely Swap: INVALID_TO")
+        await expect(pair.swap(0, 0, wallet.address, '0x')).to.be.revertedWith("LFSwap Swap: INSUFFICIENT_OUTPUT_AMOUNT")
+        await expect(pair.swap(expectedOutputAmount, expandTo18Decimals(99999999), wallet.address, '0x')).to.be.revertedWith("LFSwap Swap: INSUFFICIENT_LIQUIDITY")
+        await expect(pair.swap(expandTo18Decimals(99999999), expectedOutputAmount, wallet.address, '0x')).to.be.revertedWith("LFSwap Swap: INSUFFICIENT_LIQUIDITY")
+        await expect(pair.swap(0, expectedOutputAmount, await token0.getAddress(), '0x')).to.be.revertedWith("LFSwap Swap: INVALID_TO")
+        await expect(pair.swap(0, expectedOutputAmount, await token1.getAddress(), '0x')).to.be.revertedWith("LFSwap Swap: INVALID_TO")
 
 
         await expect(pair.swap(0, expectedOutputAmount, wallet.address, '0x'))
@@ -204,7 +204,7 @@ describe('LovelyPair', () => {
 
         await callbackHelper.setReEnter(true);
         await expect(pair.swap(expectedOutputAmount, 0, await callbackHelper.getAddress(), '0x1f'))
-            .to.be.revertedWith("Lovely Swap: LOCKED")
+            .to.be.revertedWith("LFSwap Swap: LOCKED")
         await callbackHelper.setReEnter(false);
 
 

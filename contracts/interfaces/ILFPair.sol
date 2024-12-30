@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import "./ILFERC20.sol";
+import "./ILFSwapERC20.sol";
 
-interface ILFPair is ILFERC20 {
+interface ILFPair is ILFSwapERC20 {
 	event Mint(address indexed sender, uint256 amount0, uint256 amount1);
 	event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
 	event Swap(

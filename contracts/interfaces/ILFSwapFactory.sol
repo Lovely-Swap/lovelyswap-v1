@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-interface ILFFactory {
+interface ILFSwapFactory {
 	event PairCreated(address indexed token0, address indexed token1, address pair, uint256);
 	event TokenAllowed(address indexed token, uint256 indexed activeFrom);
 

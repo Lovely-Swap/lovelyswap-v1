@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import { getBigInt, MaxUint256 } from 'ethers'
-import { ERC20, LovelyRouter02, WETH9, LovelyPair, LovelyFactory, RouterEventEmitter, LovelyPair__factory } from '../typechain-types';
+import { ERC20, LFSwapRouter, WETH9, LFSwapPair, LFSwapFactory, RouterEventEmitter, LFSwapPair__factory } from '../typechain-types';
 
 import { ecsign } from 'ethereumjs-util';
 
@@ -16,10 +16,10 @@ const overrides = {
 }
 
 enum RouterVersion {
-    LovelyRouter02 = 'LovelyRouter02'
+    LFSwapRouter = 'LFSwapRouter'
 }
 
-describe('LovelyRouter{01,02}', () => {
+describe('LFSwapRouter{01,02}', () => {
     for (const routerVersion of Object.keys(RouterVersion)) {
         let wallet: SignerWithAddress;
 
@@ -28,14 +28,14 @@ describe('LovelyRouter{01,02}', () => {
         let token1: ERC20
         let token2: ERC20
 
-        let router: LovelyRouter02
+        let router: LFSwapRouter
 
         let WETH: WETH9
         let WETHPartner: ERC20
-        let factory: LovelyFactory
-        let pair: LovelyPair
-        let pair2: LovelyPair
-        let WETHPair: LovelyPair
+        let factory: LFSwapFactory
+        let pair: LFSwapPair
+        let pair2: LFSwapPair
+        let WETHPair: LFSwapPair
         let routerEventEmitter: RouterEventEmitter
         beforeEach(async function () {
             const accounts = await ethers.getSigners();
@@ -48,7 +48,7 @@ describe('LovelyRouter{01,02}', () => {
             WETHPartner = fixture.WETHPartner
             factory = fixture.factory
             router = {
-                [RouterVersion.LovelyRouter02]: fixture.router02
+                [RouterVersion.LFSwapRouter]: fixture.router02
             }[routerVersion as RouterVersion]
             pair = fixture.pair
             pair2 = fixture.pair2

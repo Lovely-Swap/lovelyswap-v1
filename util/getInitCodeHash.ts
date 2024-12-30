@@ -1,4 +1,4 @@
-import { bytecode } from '../artifacts/contracts/LovelyPair.sol/LovelyPair.json'
+import { bytecode } from '../artifacts/contracts/LFSwapPair.sol/LFSwapPair.json'
 import { keccak256 } from '@ethersproject/solidity'
 
 const COMPUTED_INIT_CODE_HASH = keccak256(['bytes'], [`${bytecode}`])

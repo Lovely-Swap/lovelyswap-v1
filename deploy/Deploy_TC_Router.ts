@@ -1,6 +1,6 @@
 import { ethers, upgrades } from "hardhat";
 import { config as dotEnvConfig } from "dotenv";
-import { LovelyTCRouter__factory, RewardsVaultDeployer__factory } from '../typechain-types';
+import { LFSwapTCRouter__factory, RewardsVaultDeployer__factory } from '../typechain-types';
 
 dotEnvConfig();
 
@@ -12,7 +12,7 @@ async function main() {
     const competitionFee = process.env.COMPETITION_FEE as string;
     const maxCompetitior = process.env.MAX_COMPETITORS as string;
     const vaultDeployer = await new RewardsVaultDeployer__factory(deployer).deploy()
-    const router = await new LovelyTCRouter__factory(deployer).deploy(factory, wrappedNative, vaultDeployer, BigInt(competitionFee), BigInt(maxCompetitior));
+    const router = await new LFSwapTCRouter__factory(deployer).deploy(factory, wrappedNative, vaultDeployer, BigInt(competitionFee), BigInt(maxCompetitior));
 
     console.log(`Proxy deployed to ${await router.getAddress()}`);
 }

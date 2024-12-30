@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import {ILFFactory} from "./interfaces/ILFFactory.sol";
+import {ILFSwapFactory} from "./interfaces/ILFSwapFactory.sol";
 import {TransferHelper} from "./libraries/TransferHelper.sol";
 import {ILFPair, LFSwapPair} from "./LFSwapPair.sol";
 
-contract LFSwapFactory is ILFFactory {
+contract LFSwapFactory is ILFSwapFactory {
     uint256 public constant MAX_ACTIVE_FROM = 7 * 24 * 60 * 60;
     address public feeTo;
     address public feeToSetter;
@@ -139,7 +139,7 @@ contract LFSwapFactory is ILFFactory {
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         if (getPair[token0][token1] != address(0)) revert PairExists(); // single check is sufficient
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
-        pair = address(new LovelyPair{salt: salt}());
+        pair = address(new LFSwapPair{salt: salt}());
         ILFPair(pair).initialize(token0, token1, msg.sender, activeFrom);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction

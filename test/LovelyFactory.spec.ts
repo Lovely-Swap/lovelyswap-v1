@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import { expandTo18Decimals, getCreate2Address } from './shared/utilities'
 import { factoryFixture } from './shared/fixtures'
 
-import { ERC20, LovelyFactory, LovelyFactory__factory, LovelyPair__factory } from '../typechain-types';
+import { ERC20, LFSwapFactory, LFSwapFactory__factory, LFSwapPair__factory } from '../typechain-types';
 
 import { ZERO_ADDRESS } from '../util/utilities';
 import { ethers } from "hardhat"
@@ -15,12 +15,12 @@ const TEST_ADDRESSES: [string, string] = [
     '0x2000000000000000000000000000000000000000'
 ]
 
-describe('LovelyFactory', () => {
+describe('LFSwapFactory', () => {
 
     let wallet: SignerWithAddress;
     let other: SignerWithAddress;
 
-    let factory: LovelyFactory;
+    let factory: LFSwapFactory;
     let feeToken: ERC20;
 
     beforeEach(async () => {
@@ -41,7 +41,7 @@ describe('LovelyFactory', () => {
     async function createPair(tokens: [string, string]) {
         const timestamp = (await ethers.provider.getBlock('latest'))!.timestamp
 
-        const bytecode = `${LovelyPair__factory.bytecode}`
+        const bytecode = `${LFSwapPair__factory.bytecode}`
         const create2Address = getCreate2Address(await factory.getAddress(), tokens, bytecode)
         await expect(factory.createPair(...tokens, 0)).to.be.revertedWithCustomError(factory, "TokenANotWhitelisted")
 
@@ -63,7 +63,7 @@ describe('LovelyFactory', () => {
         expect(await factory.allPairs(0)).to.eq(create2Address)
         expect(await factory.allPairsLength()).to.eq(1)
 
-        const pair = LovelyPair__factory.connect(create2Address, wallet);
+        const pair = LFSwapPair__factory.connect(create2Address, wallet);
         expect(await pair.factory()).to.eq(await factory.getAddress())
         expect(await pair.token0()).to.eq(TEST_ADDRESSES[0])
         expect(await pair.token1()).to.eq(TEST_ADDRESSES[1])
@@ -78,10 +78,10 @@ describe('LovelyFactory', () => {
     })
 
     it("constructor rever", async () => {
-        await expect(new LovelyFactory__factory(wallet).deploy(wallet.address, await feeToken.getAddress(), 10, 21)).to.be.revertedWithCustomError(factory, "ValidationFailed")
-        await expect(new LovelyFactory__factory(wallet).deploy(wallet.address, await feeToken.getAddress(), 21, 10)).to.be.revertedWithCustomError(factory, "ValidationFailed")
-        await expect(new LovelyFactory__factory(wallet).deploy(wallet.address, ZERO_ADDRESS, 20, 10)).to.be.revertedWithCustomError(factory, "ValidationFailed")
-        await expect(new LovelyFactory__factory(wallet).deploy(ZERO_ADDRESS, await feeToken.getAddress(), 20, 10)).to.be.revertedWithCustomError(factory, "ValidationFailed")
+        await expect(new LFSwapFactory__factory(wallet).deploy(wallet.address, await feeToken.getAddress(), 10, 21)).to.be.revertedWithCustomError(factory, "ValidationFailed")
+        await expect(new LFSwapFactory__factory(wallet).deploy(wallet.address, await feeToken.getAddress(), 21, 10)).to.be.revertedWithCustomError(factory, "ValidationFailed")
+        await expect(new LFSwapFactory__factory(wallet).deploy(wallet.address, ZERO_ADDRESS, 20, 10)).to.be.revertedWithCustomError(factory, "ValidationFailed")
+        await expect(new LFSwapFactory__factory(wallet).deploy(ZERO_ADDRESS, await feeToken.getAddress(), 20, 10)).to.be.revertedWithCustomError(factory, "ValidationFailed")
 
     })
 

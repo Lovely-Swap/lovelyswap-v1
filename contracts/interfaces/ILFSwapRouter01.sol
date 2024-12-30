@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-interface ILFRouter01 {
+interface ILFSwapRouter01 {
 	function factory() external view returns (address);
 
 	function WETH() external view returns (address);

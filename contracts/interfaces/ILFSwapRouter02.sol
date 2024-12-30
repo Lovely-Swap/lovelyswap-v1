@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import "./ILFRouter01.sol";
+import "./ILFSwapRouter01.sol";
 
-interface ILFRouter02 is ILFRouter01 {
+interface ILFSwapRouter02 is ILFSwapRouter01 {
 	function removeLiquidityETHSupportingFeeOnTransferTokens(
 		address token,
 		uint256 liquidity,

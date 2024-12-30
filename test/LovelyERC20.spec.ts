@@ -10,7 +10,7 @@ import { ERC20__factory } from '../typechain-types/factories/contracts/test/ERC2
 const TOTAL_SUPPLY = expandTo18Decimals(10000)
 const TEST_AMOUNT = expandTo18Decimals(10)
 
-describe('LovelyERC20', () => {
+describe('LFSwapERC20', () => {
     let wallet: SignerWithAddress;
     let other: SignerWithAddress;
 
@@ -24,8 +24,8 @@ describe('LovelyERC20', () => {
 
     it('name, symbol, decimals, totalSupply, balanceOf, DOMAIN_SEPARATOR, PERMIT_TYPEHASH', async () => {
         const name = await token.name()
-        expect(name).to.eq('Lovely Swap')
-        expect(await token.symbol()).to.eq('LS')
+        expect(name).to.eq('LFSwap')
+        expect(await token.symbol()).to.eq('LFS')
         expect(await token.decimals()).to.eq(18)
         expect(await token.totalSupply()).to.eq(TOTAL_SUPPLY)
         expect(await token.balanceOf(wallet.address)).to.eq(TOTAL_SUPPLY)
@@ -140,10 +140,10 @@ describe('LovelyERC20', () => {
 
         const signature = ethers.Signature.from(sig);
         await expect(token.permit(wallet.address, other.address, TEST_AMOUNT, 0, signature.v, hexlify(signature.r), hexlify(signature.s)))
-            .to.be.revertedWith("Lovely Swap: EXPIRED");
+            .to.be.revertedWith("LFSwap Swap: EXPIRED");
 
         await expect(token.permit(other.address, other.address, TEST_AMOUNT, deadline, signature.v, hexlify(signature.r), hexlify(signature.s)))
-            .to.be.revertedWith("Lovely Swap: INVALID_SIGNATURE");
+            .to.be.revertedWith("LFSwap Swap: INVALID_SIGNATURE");
 
         await expect(token.permit(wallet.address, other.address, TEST_AMOUNT, deadline, signature.v, hexlify(signature.r), hexlify(signature.s)))
             .to.emit(token, 'Approval')
